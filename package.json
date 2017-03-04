@@ -1,0 +1,29 @@
+{
+  "name": "asana-connector",
+  "version": "1.0.0",
+  "description": "connect to Asana",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/appleskiller/asana-connector.git"
+  },
+  "keywords": [
+    "typescript",
+    "js",
+    "asana"
+  ],
+  "author": "appleskiller",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/appleskiller/asana-connector/issues"
+  },
+  "dependencies": {
+    "asana": "^0.15.0",
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {},
+  "homepage": "https://github.com/appleskiller/asana-connector#readme"
+}
