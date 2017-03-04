@@ -4,6 +4,8 @@
   "description": "connect to Asana",
   "main": "dist/server.js",
   "scripts": {
+    "prestart": "tsc -p ./",
+    "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,8 +24,13 @@
   },
   "dependencies": {
     "asana": "^0.15.0",
+    "cookie-parser": "^1.4.3",
+    "express": "^4.15.0",
     "lodash": "^4.17.4"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "typescript": "^2.2.1",
+    "typings": "^2.1.0"
+  },
   "homepage": "https://github.com/appleskiller/asana-connector#readme"
 }
