@@ -4,7 +4,8 @@ Asana connector
 # typings 
 ```
 typings install express lodash --save
-typings install dt~node dt~cookie-parser --save
+typings install dt~cookie-parser --save
+typings install dt~node dt~asana --save --global
 ```
 
 # 启动服务

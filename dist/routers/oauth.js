@@ -1,19 +1,12 @@
 "use strict";
 var express = require("express");
-var Asana = require("asana");
+var asanaclient = require("../libs/asanaclient");
 var router = express.Router();
 var clientId = process.env['ASANA_CLIENT_ID'];
 var clientSecret = process.env['ASANA_CLIENT_SECRET'];
 var port = process.env['PORT'] || 18081;
-function createClient() {
-    return Asana.Client.create({
-        clientId: clientId,
-        clientSecret: clientSecret,
-        redirectUri: 'http://localhost:' + port + '/connect/oauth_callback'
-    });
-}
-router.get('/connect', function (req, res) {
-    var client = createClient();
+router.get('/', function (req, res) {
+    var client = asanaclient.create();
     var token = req.cookies.token;
     if (token) {
         client.useOauth({ credentials: token });
@@ -27,13 +20,13 @@ router.get('/connect', function (req, res) {
         res.redirect(client.app.asanaAuthorizeUrl());
     }
 });
-router.get('/connect/oauth_callback', function (req, res) {
+router.get('/oauth_callback', function (req, res) {
     var code = req.param('code');
     if (code) {
-        var client = createClient();
+        var client = asanaclient.create();
         client.app.accessTokenFromCode(code).then(function (credentials) {
             res.cookie('token', credentials.access_token, { maxAge: 60 * 60 * 1000 });
-            res.redirect('/');
+            res.redirect('/asana');
         });
     }
     else {

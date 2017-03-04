@@ -5,16 +5,26 @@ var fs = require("fs");
 var http = require("http");
 var https = require("https");
 var cookieParser = require("cookie-parser");
+var bodyParser = require("body-parser");
+var session = require("express-session");
 var oathRouter = require("./routers/oauth");
 var app = express();
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true }
+}));
+app.use('/asana', oathRouter);
 var privateKey = fs.readFileSync("../pem/server-key.pem", "utf-8");
 var certificate = fs.readFileSync("../pem/server-cert.pem", "utf-8");
 var credentials = {
     key: privateKey,
     cert: certificate
 };
-app.use(cookieParser());
-app.use('/', oathRouter);
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(credentials, app);
 app.get('/', function (req, res) {

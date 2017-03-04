@@ -6,6 +6,7 @@
   "scripts": {
     "prestart": "tsc -p ./",
     "start": "node dist/server.js",
+    "debug": "tsc -p ./ && node --debug dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,8 +25,11 @@
   },
   "dependencies": {
     "asana": "^0.15.0",
+    "bluebird": "^3.5.0",
+    "body-parser": "^1.17.0",
     "cookie-parser": "^1.4.3",
     "express": "^4.15.0",
+    "express-session": "^1.15.1",
     "lodash": "^4.17.4"
   },
   "devDependencies": {

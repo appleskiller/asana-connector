@@ -4,6 +4,7 @@
     "express": "registry:npm/express#4.14.0+20170217205433"
   },
   "globalDependencies": {
+    "asana": "registry:dt/asana#0.14.0+20160811111312",
     "node": "registry:dt/node#7.0.0+20170204020307"
   }
 }

@@ -1,5 +1,6 @@
 import * as express from "express";
 import * as Asana from "asana";
+import * as asanaclient from "../libs/asanaclient";
 
 var router = express.Router();
 
@@ -7,19 +8,9 @@ var clientId = process.env['ASANA_CLIENT_ID'];
 var clientSecret = process.env['ASANA_CLIENT_SECRET'];
 var port = process.env['PORT'] || 18081;
 
-// Create an Asana client. Do this per request since it keeps state that
-// shouldn't be shared across requests.
-function createClient() {
-    return Asana.Client.create({
-        clientId: clientId,
-        clientSecret: clientSecret,
-        redirectUri: 'http://localhost:' + port + '/connect/oauth_callback'
-    });
-}
-
 // Home page - shows user name if authenticated, otherwise seeks authorization.
-router.get('/connect', function (req, res) {
-    var client = createClient();
+router.get('/', function (req, res) {
+    var client = asanaclient.create();
     // If token is in the cookie, use it to show info.
     var token = req.cookies.token;
     if (token) {
@@ -40,12 +31,12 @@ router.get('/connect', function (req, res) {
 });
 
 // Authorization callback - redirected to from Asana.
-router.get('/connect/oauth_callback', function (req, res) {
+router.get('/oauth_callback', function (req, res) {
     var code = req.param('code');
     if (code) {
         // If we got a code back, then authorization succeeded.
         // Get token. Store it in the cookie and redirect home.
-        var client = createClient();
+        var client = asanaclient.create();
         client.app.accessTokenFromCode(code).then(function (credentials) {
             // The credentials contain the refresh token as well. If you use it, keep
             // it safe on the server! Here we just use the access token, and store it
@@ -54,7 +45,7 @@ router.get('/connect/oauth_callback', function (req, res) {
             // to prevent it from being stolen.
             res.cookie('token', credentials.access_token, { maxAge: 60 * 60 * 1000 });
             // Redirect back home, where we should now have access to Asana data.
-            res.redirect('/');
+            res.redirect('/asana');
         });
     } else {
         // Authorization could have failed. Show an error.
