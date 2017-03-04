@@ -60,3 +60,4 @@ $ npm run start
 ```
 * 通过服务器私钥文件和CSR文件生成服务器证书
 > openssl x509 -req -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -in server-csr.pem -out server-cert.pem -extensions v3_req -extfile openssl.cnf
+* 请确保启动服务前已经将生成的server-cert.pem和server-key.pem拷贝到pem目录下。
