@@ -6,7 +6,7 @@ class Cache {
         this._doc = {};
     }
     get(key: string): any {
-        return this._doc;
+        return this._doc[key];
     }
     set(key: string , value: any): void {
         this._doc[key] = value;
@@ -20,7 +20,7 @@ class Cache {
 }
 
 var pool: {[type: string]: Cache} = {};
-export function getInstance(name: string): Cache {
+export function createInstance(name: string): Cache {
     if (!pool[name]) {
         pool[name] = new Cache(name);
     }

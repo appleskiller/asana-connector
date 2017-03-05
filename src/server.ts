@@ -7,6 +7,7 @@ import * as bodyParser from "body-parser";
 import * as session from "express-session";
 
 import * as oathRouter from "./routers/oauth";
+import * as resourceRouter from "./routers/resource";
 
 var app = express();
 
@@ -19,8 +20,16 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: true }
 }))
-
+// 允许跨域
+app.use(function(req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Credentials','true');
+    next();
+});
 app.use('/asana', oathRouter);
+app.use('/asana/resource', resourceRouter);
 
 var privateKey = fs.readFileSync("../pem/server-key.pem", "utf-8");
 var certificate = fs.readFileSync("../pem/server-cert.pem", "utf-8");

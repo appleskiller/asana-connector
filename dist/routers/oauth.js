@@ -1,36 +1,71 @@
 "use strict";
 var express = require("express");
 var asanaclient = require("../libs/asanaclient");
+var Logger = require("../libs/logger");
+var cache = require("../libs/cache");
+var storage = cache.createInstance("asana");
+var log = Logger.getLogger("asana_connector");
 var router = express.Router();
 var clientId = process.env['ASANA_CLIENT_ID'];
 var clientSecret = process.env['ASANA_CLIENT_SECRET'];
 var port = process.env['PORT'] || 18081;
-router.get('/', function (req, res) {
-    var client = asanaclient.create();
-    var token = req.cookies.token;
-    if (token) {
-        client.useOauth({ credentials: token });
-        client.users.me().then(function (me) {
-            res.end('Hello ' + me.name);
-        }).catch(function (err) {
-            res.end('Error fetching user: ' + err);
+router.get("/currentuser", function (req, res) {
+    var asanauser = storage.get("asanauser");
+    if (asanauser) {
+        res.charset = 'utf-8';
+        res.send({
+            connected: true,
+            user: asanauser.user
         });
     }
     else {
+        res.send({
+            connected: false
+        });
+    }
+});
+router.get('/connect', function (req, res) {
+    var client = asanaclient.create().nativeClient();
+    var asanauser = storage.get("asanauser");
+    if (asanauser) {
+        res.send("<script>window.close()</script>");
+    }
+    else {
+        log.log("connect to asana oauth ...");
         res.redirect(client.app.asanaAuthorizeUrl());
     }
 });
+router.get("/disconnect", function (req, res) {
+    log.log("disconnect from asana oauth ...");
+    storage.del("asanauser");
+    res.end();
+});
 router.get('/oauth_callback', function (req, res) {
-    var code = req.param('code');
+    var client = asanaclient.create().nativeClient();
+    var code = req.query.code;
     if (code) {
-        var client = asanaclient.create();
+        log.log("asana callback with code");
         client.app.accessTokenFromCode(code).then(function (credentials) {
-            res.cookie('token', credentials.access_token, { maxAge: 60 * 60 * 1000 });
-            res.redirect('/asana');
+            log.log("asana connected.");
+            client.useOauth({ credentials: credentials.access_token });
+            client.users.me().then(function (me) {
+                storage.set("asanauser", {
+                    user: me,
+                    token: credentials
+                });
+                res.send("<script>window.close()</script>");
+            }).catch(function (err) {
+                res.charset = 'utf-8';
+                var content = "Error fetching user , <a href=\"/asana/connect\">reconnect</a>. <div><a onclick=\"alert('" + JSON.stringify(err) + "')\">What's happen?</a></div>";
+                res.send(content);
+            });
         });
     }
     else {
-        res.end('Error getting authorization: ' + req.param('error'));
+        log.log("asana callback without code! Error getting authorization: ", req.query.error);
+        res.charset = 'utf-8';
+        var content = "Error getting authorization , <a href=\"/asana/connect\">reconnect</a>. <div><a onclick=\"alert('" + req.query.error + "')\">What's happen?</a></div>";
+        res.send(content);
     }
 });
 module.exports = router;

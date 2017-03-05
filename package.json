@@ -4,8 +4,7 @@
   "description": "connect to Asana",
   "main": "dist/server.js",
   "scripts": {
-    "prestart": "tsc -p ./",
-    "start": "node dist/server.js",
+    "start": "tsc -p ./ && node dist/server.js",
     "debug": "tsc -p ./ && node --debug dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
