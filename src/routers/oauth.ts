@@ -74,7 +74,7 @@ router.get('/oauth_callback', function (req, res) {
         // Authorization could have failed. Show an error.
         log.log("asana callback without code! Error getting authorization: " , req.query.error);
         res.charset = 'utf-8';
-        let content = `Error getting authorization , <a href="/asana/connect">reconnect</a>. <div><a onclick="alert('${req.query.error}')">What's happen?</a></div>`;
+        let content = `Error getting authorization , <a href="/asana/connect">reconnect</a>. <div><a href="javascript:void(0)" onclick="alert('${req.query.error}')">What's happen?</a></div>`;
         res.send(content);
     }
 });

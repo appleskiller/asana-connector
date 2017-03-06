@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "cookie-parser": "registry:dt/cookie-parser#1.3.4+20160428043022",
-    "express": "registry:npm/express#4.14.0+20170217205433"
+    "express": "registry:npm/express#4.14.0+20170217205433",
+    "request": "registry:npm/request#2.69.0+20160428223725"
   },
   "globalDependencies": {
     "asana": "registry:dt/asana#0.14.0+20160811111312",

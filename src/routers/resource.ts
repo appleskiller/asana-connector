@@ -3,6 +3,7 @@ import * as Asana from "asana";
 import * as asanaclient from "../libs/asanaclient";
 import * as Logger from "../libs/logger";
 import * as cache from "../libs/cache";
+import * as shujuguanclient from "../libs/shujuguanclient";
 
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_resources");
@@ -14,34 +15,39 @@ function progressError (res) {
     }
 }
 
+function metadatas(metaType: string) {
+    return function(req , res) {
+        var asanauser = storage.get("asanauser");
+        if (asanauser) {
+            var asana = asanaclient.create(asanauser.token);
+            if (!asanauser.user.workspaces || !asanauser.user.workspaces.length) {
+                res.charset = 'utf-8';
+                res.send([]);
+            } else {
+                asana.metadatas(metaType , asanauser.user.workspaces).then(function(result: asanaclient.Projects[]) {
+                    res.charset = 'utf-8';
+                    res.send(result);
+                } , progressError(res));
+            }
+        } else {
+            res.status(401);
+        }
+    }
+}
+
 router.get("/workspaces" , function(req , res: express.Response) {
     var asanauser = storage.get("asanauser");
     if (asanauser) {
-        var asana = asanaclient.create(asanauser.token);
-        asana.workspaces().then(function(result: asanaclient.ResourceList<asanaclient.Workspaces>) {
-            res.charset = 'utf-8';
-            res.send(result.data);
-        } , progressError(res));
+        res.charset = 'utf-8';
+        res.send(asanauser.workspaces);
     } else {
         res.sendStatus(401);
     }
 })
-router.get("/projects" , function(req , res: express.Response) {
-    var asanauser = storage.get("asanauser");
-    if (asanauser) {
-        var asana = asanaclient.create(asanauser.token);
-        if (!asanauser.user.workspaces || !asanauser.user.workspaces.length) {
-            res.charset = 'utf-8';
-            res.send([]);
-        } else {
-            asana.projects(asanauser.user.workspaces[0].id).then(function(result: asanaclient.ResourceList<asanaclient.Workspaces>) {
-                res.charset = 'utf-8';
-                res.send(result.data);
-            } , progressError(res));
-        }
-    } else {
-        res.sendStatus(401);
-    }
-})
+
+router.get("/projects" , metadatas("projects"));
+router.get("/users" , metadatas("users"));
+router.get("/tasks" , metadatas("tasks"));
+router.get("/tags" , metadatas("tags"));
 
 export = router;

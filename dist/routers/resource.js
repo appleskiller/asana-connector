@@ -14,11 +14,8 @@ function progressError(res) {
 router.get("/workspaces", function (req, res) {
     var asanauser = storage.get("asanauser");
     if (asanauser) {
-        var asana = asanaclient.create(asanauser.token);
-        asana.workspaces().then(function (result) {
-            res.charset = 'utf-8';
-            res.send(result.data);
-        }, progressError(res));
+        res.charset = 'utf-8';
+        res.send(asanauser.workspaces);
     }
     else {
         res.sendStatus(401);
@@ -33,14 +30,14 @@ router.get("/projects", function (req, res) {
             res.send([]);
         }
         else {
-            asana.projects(asanauser.user.workspaces[0].id).then(function (result) {
+            asana.metadatas("projects", asanauser.user.workspaces).then(function (result) {
                 res.charset = 'utf-8';
-                res.send(result.data);
+                res.send(result);
             }, progressError(res));
         }
     }
     else {
-        res.sendStatus(401);
+        res.status(401);
     }
 });
 module.exports = router;
