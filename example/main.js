@@ -36,11 +36,34 @@ $(document).ready(function () {
             renderList("workspaces",result);
         });
         $.ajax({
-            url: 'https://localhost:18081/asana/resource/projects',
+            url: 'https://localhost:18081/asana/resource/teams',
             type: "GET"
         }).then(function(result) {
-            renderList("projects",result);
+            renderList("teams",result);
         });
+        // $.ajax({
+        //     url: 'https://localhost:18081/asana/resource/projects',
+        //     type: "GET"
+        // }).then(function(result) {
+        //     renderList("projects",result);
+        // });
+
+        // $.ajax({
+        //     url: "https://localhost:18081/asana/resource/projects",
+        //     type: "POST",
+        //     contentType: "application/json",
+        //     data: JSON.stringify({
+        //         ids: [275995325944865]
+        //     })
+        // })
+        $.ajax({
+            url: "https://localhost:18081/asana/resource/tasks",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                ids: [285199443646363]
+            })
+        })
     }
 
     function setAsanaUser(user) {

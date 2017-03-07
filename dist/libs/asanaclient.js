@@ -66,6 +66,39 @@ var AsanaClient = (function () {
             }
         });
     };
+    AsanaClient.prototype.entities = function (resType, ids) {
+        var client = this._nativeClient;
+        return new Promise(function (resolve, reject) {
+            if (!client[resType]) {
+                return reject(new Error("resType invalid : " + resType));
+            }
+            else {
+                var promises = [];
+                for (var i = 0; i < ids.length; i++) {
+                    promises.push(client[resType].findById(ids[i]));
+                }
+                Promise.all(promises).then(function (entities) {
+                    resolve(entities);
+                }, reject);
+            }
+        });
+    };
+    AsanaClient.prototype.teams = function (workspaces) {
+        var client = this._nativeClient;
+        return new Promise(function (resolve, reject) {
+            var promises = [];
+            for (var i = 0; i < workspaces.length; i++) {
+                promises.push(client.teams.findByOrganization(workspaces[i].id));
+            }
+            Promise.all(promises).then(function (results) {
+                var ret = [];
+                for (var i = 0; i < results.length; i++) {
+                    ret.push(results[i].data || []);
+                }
+                resolve(ret);
+            }, reject);
+        });
+    };
     return AsanaClient;
 }());
 function create(credentials) {
