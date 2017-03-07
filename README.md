@@ -8,6 +8,24 @@ typings install dt~cookie-parser --save
 typings install dt~node dt~asana --save --global
 ```
 
+# 服务器配置
+创建/config/server.json文件，配置内容
+```
+{
+    "env": {
+        "PORT": 18080,
+        "SSLPORT": 18081
+    },
+    "asana": {
+        "clientId": "your asana clientId",
+        "clientSecret": "your asana clientSecret",
+        "redirectUri": "redirectUri from asana oauth"
+    },
+    "shujuguan": {
+        "token": "your shujuguan token"
+    }
+}
+```
 # 启动服务
 ```
 $ npm run start

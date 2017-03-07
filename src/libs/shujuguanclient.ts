@@ -1,6 +1,8 @@
-var token = "93eb24546cf93796cfbcfc6aa330e1d5";
 import * as Promise from 'bluebird';
 import * as request from 'request';
+
+var config = require("../../config/server.json");
+var token = config.shujuguan.token;
 
 export type DataTable = {
 

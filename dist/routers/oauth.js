@@ -6,9 +6,6 @@ var cache = require("../libs/cache");
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_connector");
 var router = express.Router();
-var clientId = process.env['ASANA_CLIENT_ID'];
-var clientSecret = process.env['ASANA_CLIENT_SECRET'];
-var port = process.env['PORT'] || 18081;
 router.get("/currentuser", function (req, res) {
     var asanauser = storage.get("asanauser");
     if (asanauser) {

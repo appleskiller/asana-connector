@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var token = "93eb24546cf93796cfbcfc6aa330e1d5";
 var Promise = require("bluebird");
 var request = require("request");
+var config = require("../../config/server.json");
+var token = config.shujuguan.token;
 function doRequest(params, resolve, reject) {
     request(params, function (err, res, payload) {
         if (err) {

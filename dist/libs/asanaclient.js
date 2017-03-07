@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var Asana = require("asana");
 var Promise = require("bluebird");
-var clientId = "286003177885547";
-var clientSecret = "dc29a7d89aeb8dd631fc2c94e5de8aa6";
+var config = require("../../config/server.json");
+var clientId = config.asana.clientId;
+var clientSecret = config.asana.clientSecret;
 var port = process.env['PORT'] || 18081;
 var LIMIT = 100;
 function fetchList(dispatcher, params, list) {
@@ -33,8 +34,7 @@ var AsanaClient = (function () {
     function AsanaClient(credentials) {
         var client = Asana.Client.create({
             clientId: clientId,
-            clientSecret: clientSecret,
-            redirectUri: 'https://localhost:' + port + '/asana/oauth_callback'
+            clientSecret: clientSecret
         });
         credentials && client.useOauth({ credentials: credentials });
         this._nativeClient = client;

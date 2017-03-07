@@ -9,6 +9,8 @@ import * as session from "express-session";
 import * as oathRouter from "./routers/oauth";
 import * as resourceRouter from "./routers/resource";
 
+var config = require("../config/server.json");
+
 var app = express();
 
 app.use(cookieParser());
@@ -50,8 +52,8 @@ app.get('/', function (req: express.Request, res: express.Response) {
     }
 });
 
-var PORT = 18080;
-var SSLPORT = 18081;
+var PORT = config.env.PORT;
+var SSLPORT = config.env.SSLPORT;
 httpServer.listen(PORT, function () {
     console.log('HTTP Server is running on: http://localhost:%s', PORT);
 });

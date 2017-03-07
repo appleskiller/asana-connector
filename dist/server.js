@@ -9,6 +9,7 @@ var bodyParser = require("body-parser");
 var session = require("express-session");
 var oathRouter = require("./routers/oauth");
 var resourceRouter = require("./routers/resource");
+var config = require("../config/server.json");
 var app = express();
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -44,8 +45,8 @@ app.get('/', function (req, res) {
         res.status(200).send('Welcome!');
     }
 });
-var PORT = 18080;
-var SSLPORT = 18081;
+var PORT = config.env.PORT;
+var SSLPORT = config.env.SSLPORT;
 httpServer.listen(PORT, function () {
     console.log('HTTP Server is running on: http://localhost:%s', PORT);
 });
