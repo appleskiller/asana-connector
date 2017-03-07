@@ -22,6 +22,7 @@ typings install dt~node dt~asana --save --global
         "redirectUri": "redirectUri from asana oauth"
     },
     "shujuguan": {
+        "enterprise": "shujuguan",
         "token": "your shujuguan token"
     }
 }

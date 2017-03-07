@@ -3,6 +3,7 @@ import * as request from 'request';
 
 var config = require("../../config/server.json");
 var token = config.shujuguan.token;
+var enterprise = config.shujuguan.enterprise;
 
 export type DataTable = {
 
@@ -38,7 +39,7 @@ class ShujuguanClient {
         var token = this._token;
         return new Promise(function (resolve, reject) {
             doRequest({
-                url: "http://qiye.shujuguan.cn/openapi/data/create",
+                url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/createdatatable`,
                 method: "POST",
                 headers: {
                     "Authorization": `OAuth ${token}`,
