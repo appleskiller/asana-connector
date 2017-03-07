@@ -5,25 +5,26 @@ var Promise = require("bluebird");
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
 var clientSecret = config.asana.clientSecret;
+var redirectUri = config.asana.redirectUri;
 var port = process.env['PORT'] || 18081;
 var LIMIT = 100;
-function fetchList(dispatcher, params, list) {
-    list = list || [];
+function fetchList(dispatcher, params, finalResult) {
+    finalResult = finalResult || { list: [] };
     params = params || {};
     params.limit = params.limit || LIMIT;
     return new Promise(function (resolve, reject) {
         dispatcher.findAll(params).then(function (result) {
-            list = list.concat(result.data || []);
-            if (result["next_page"] && result["next_page"]["offset"]) {
-                params.offset = result["next_page"]["offset"];
-                fetchList(dispatcher, params, list).then(function (result) {
-                    resolve(list);
+            finalResult.list = finalResult.list.concat(result.data || []);
+            if (result._response && result._response.next_page && result._response.next_page.offset) {
+                params.offset = result._response.next_page.offset;
+                fetchList(dispatcher, params, finalResult).then(function () {
+                    resolve(finalResult.list);
                 }, function (err) {
                     reject(err);
                 });
             }
             else {
-                resolve(list);
+                resolve(finalResult.list);
             }
         }, function (err) {
             reject(err);
@@ -34,7 +35,8 @@ var AsanaClient = (function () {
     function AsanaClient(credentials) {
         var client = Asana.Client.create({
             clientId: clientId,
-            clientSecret: clientSecret
+            clientSecret: clientSecret,
+            redirectUri: redirectUri
         });
         credentials && client.useOauth({ credentials: credentials });
         this._nativeClient = client;
@@ -54,7 +56,7 @@ var AsanaClient = (function () {
             else {
                 var promises = [], projects = [];
                 for (var i = 0; i < workspaces.length; i++) {
-                    promises.push(fetchList(client[metaType], { workspace: workspaces[i] }).then(function (result) {
+                    promises.push(fetchList(client[metaType], { workspace: workspaces[i].id }).then(function (result) {
                         projects = projects.concat(result);
                     }));
                 }

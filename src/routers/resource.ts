@@ -17,6 +17,7 @@ function progressError (res) {
 
 function metadatas(metaType: string) {
     return function(req , res) {
+        log.log(`fetch metadatas ${metaType}...`);
         var asanauser = storage.get("asanauser");
         if (asanauser) {
             var asana = asanaclient.create(asanauser.token);
@@ -25,6 +26,7 @@ function metadatas(metaType: string) {
                 res.send([]);
             } else {
                 asana.metadatas(metaType , asanauser.user.workspaces).then(function(result: asanaclient.Projects[]) {
+                    log.log(`fetch metadatas ${metaType} end. count:` , result.length);
                     res.charset = 'utf-8';
                     res.send(result);
                 } , progressError(res));
@@ -39,7 +41,7 @@ router.get("/workspaces" , function(req , res: express.Response) {
     var asanauser = storage.get("asanauser");
     if (asanauser) {
         res.charset = 'utf-8';
-        res.send(asanauser.workspaces);
+        res.send(asanauser.user.workspaces);
     } else {
         res.sendStatus(401);
     }
