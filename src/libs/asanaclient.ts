@@ -1,5 +1,6 @@
 import * as Asana from "asana";
 import * as Promise from 'bluebird';
+import * as progress from "./progress";
 
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
@@ -34,6 +35,29 @@ function fetchList(dispatcher:any , params?: any , finalResult?: ListResult): Pr
             if (result._response && result._response.next_page && result._response.next_page.offset) {
                 params.offset = result._response.next_page.offset;
                 fetchList(dispatcher , params , finalResult).then(function () {
+                    resolve(finalResult.list);
+                } , function (err) {
+                    reject(err);
+                });
+            } else {
+                resolve(finalResult.list);
+            }
+        } , function (err) {
+            reject(err);
+        })
+    })
+}
+
+function fetchListById(dispatcher:any , method:string , id: number , params?: any , finalResult?: ListResult): Promise<Resource[]> {
+    finalResult = finalResult || {list: []};
+    params = params || {};
+    params.limit = params.limit || LIMIT;
+    return new Promise(function (resolve , reject) {
+        dispatcher[method](id , params).then(function (result: ResourceList<Workspaces>) {
+            finalResult.list = finalResult.list.concat(result.data || []);
+            if (result._response && result._response.next_page && result._response.next_page.offset) {
+                params.offset = result._response.next_page.offset;
+                fetchListById(dispatcher , method , id , params , finalResult).then(function () {
                     resolve(finalResult.list);
                 } , function (err) {
                     reject(err);
@@ -99,19 +123,21 @@ class AsanaClient {
     }
     progressEntities(resType: string , ids: number[] , processor: (Resource) => Promise<any>): Promise<Resource[]> {
         var dispatcher = this._nativeClient[resType];
-        var progress = {current: 0 , total: ids.length , error: 0 , currentName: ""};
+        var token = progress.create();
         Promise.map(ids , function (id: string , index: number , length: number) {
             return dispatcher.findById(id).then(function (res: Resource) {
-                progress.current++;
-                progress.currentName = res.name;
+                token.loaded++
+                token.current = res.name;
                 return processor(res);
             }).catch(function ignore() {
-                progress.error++;
+                token.error++;
             })
         } , {
             concurrency: 10
+        }).then(function () {
+            progress.end(token.id);
         });
-        return progress;
+        return token;
     }
     teams(workspaces: Workspaces[]): Promise<Teams[]> {
         var client = this._nativeClient;
@@ -128,6 +154,28 @@ class AsanaClient {
                 resolve(ret);
             } , reject);
         })
+    }
+    tasksInProject(projectId: number): Promise<Resource[]> {
+        // fetch all tasks
+        var client = this._nativeClient;
+        return new Promise(function (resolve , reject) {
+            fetchListById(client.projects , "tasks" , projectId).then(function (tasks: Resource[]) {
+                // fetch all subtasks
+                Promise.map(tasks , function (task: Resource , index: number , length: number) {
+                    return fetchListById(client.tasks , "subtasks" , task.id).then(function (subtasks: Resource[]) {
+                        task["subtasks"] = subtasks;
+                    });
+                } , {
+                    concurrency: 10
+                }).then(function () {
+                    resolve(tasks);
+                }).catch(function (err) {
+                    reject(err);
+                })
+            }).catch(function (err) {
+                reject(err);
+            })
+        });
     }
 }
 

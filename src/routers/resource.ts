@@ -4,6 +4,7 @@ import * as asanaclient from "../libs/asanaclient";
 import * as Logger from "../libs/logger";
 import * as cache from "../libs/cache";
 import * as shujuguanclient from "../libs/shujuguanclient";
+import * as progress from "../libs/progress";
 
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_resources");
@@ -100,7 +101,19 @@ router.post("/tags" , entities("tags"));
 router.post("/teams" , entities("teams"));
 
 router.get("/progress" , function (req , res) {
-    
+    res.charset = 'utf-8';
+    res.send(progress.all());
 })
+
+router.post("/upload/shujuguan" , function (req , res) {
+    var name = req.body.name;
+    var projectId = req.body.projectId;
+    if (!name || !projectId) {
+        res.status(500).send("invalid post body!");
+    } else {
+        
+    }
+})
+
 
 export = router;

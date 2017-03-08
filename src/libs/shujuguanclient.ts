@@ -1,5 +1,6 @@
 import * as Promise from 'bluebird';
 import * as request from 'request';
+import * as _ from "lodash";
 
 var config = require("../../config/server.json");
 var token = config.shujuguan.token;
@@ -26,14 +27,43 @@ function doRequest(params, resolve, reject) {
     });
 }
 
+var _propMap = {
+    "columnType": "type",
+}
+
+function _getColumnPropForCreate(key: string): string {
+    return _propMap[key] ? _propMap[key] : key;
+}
+
 function convertColumnToCreat (columns: Column[]): any[] {
-    // {
-    //     "dataType": "STRING",
-    //     "length": -1,
-    //     "name": "a",
-    //     "type": "TEXT"
-    // }
-    return [];
+    var results = [] , obj: any;
+    _.each(columns , function (column: Column) {
+        obj = {};
+        for (var key in column) {
+            obj[_getColumnPropForCreate(key)] = column[key];
+        }
+        results.push(obj);
+    })
+    return results;
+}
+
+function convertRowDatas(columns: Column[] , rowData: RowData[]): any[]{
+    var results = [] , row;
+    _.each(rowData , function (data: RowData) {
+        row = [];
+        _.each(columns , function (column: Column , index: number) {
+            var name = column.name;
+            var value = rowData[name];
+            if (_.isNil(value)) {
+                value = null;
+            } else if (column.dataType === "DATE") {
+                value = (new Date(value)).getTime();
+            }
+            row[index] = value;
+        });
+        results.push(row);
+    })
+    return results;
 }
 
 type Column = {
@@ -45,6 +75,7 @@ type Column = {
 type DataTable = {
     columns: Column[];
     name: string;
+    id?: string;
 }
 type RowData = {
     [name: string]: any
@@ -97,55 +128,47 @@ class DataTableAPI {
         });
     }
     append(data: RowData[]): Promise<DataTableAPI> {
-
+        var self = this;
+        return new Promise(function (resolve , reject) {
+            if (!self._datatable) {
+                reject();
+            } else {
+                doRequest({
+                    url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${self._datatable.id}/appenddatas`,
+                    method: "POST",
+                    headers: {
+                        "Authorization": `OAuth ${token}`,
+                        "Content-Type": "application/json; charset=utf-8"
+                    },
+                    json: true,
+                    body: convertRowDatas(self._datatable.columns , data)
+                }, resolve , reject);
+            }
+        })
     }
     commit(): Promise<DataTableAPI> {
-
+        var self = this;
+        return new Promise(function (resolve , reject) {
+            if (!self._datatable) {
+                reject();
+            } else {
+                doRequest({
+                    url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${self._datatable.id}/commit`,
+                    method: "GET",
+                    headers: {
+                        "Authorization": `OAuth ${token}`,
+                        "Content-Type": "application/json; charset=utf-8"
+                    }
+                }, resolve , reject);
+            }
+        })
     }
 }
 
 class ShujuguanClient {
-    datatables(): Promise<DataTable[]> {
-        return new Promise(function (resolve, reject) {
-            doRequest({
-                url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/createdatatable`,
-                method: "POST",
-                headers: {
-                    "Authorization": `OAuth ${token}`,
-                    "Content-Type": "application/json; charset=utf-8"
-                },
-                json: true,
-                body: {
-                    "batchDataColumns": [
-                        {
-                            "dataType": "STRING",
-                            "length": -1,
-                            "name": "a",
-                            "type": "TEXT"
-                        },
-                        {
-                            "dataType": "INTEGER",
-                            "length": -1,
-                            "name": "b",
-                            "type": "INTEGER"
-                        },
-                        {
-                            "dataType": "DATE",
-                            "length": -1,
-                            "name": "c",
-                            "type": "DATE"
-                        },
-                        {
-                            "dataType": "DOUBLE",
-                            "length": -1,
-                            "name": "d",
-                            "type": "DECIMAL"
-                        }
-                    ],
-                    "dataName": "数据集api创建"
-                }
-            }, resolve, reject);
-        });
+    datatables: DataTableAPI;
+    constructor(){
+        this.datatables = new DataTableAPI();
     }
 }
 

@@ -2,6 +2,7 @@ import * as _ from "lodash";
 
 export type ProgressTask = {
     current: string;
+    error: number;
     loaded: number;
     total: number;
     id: string;
@@ -14,6 +15,7 @@ export function create (): ProgressTask{
     var task =  {
         id: id ,
         current: "",
+        error: 0,
         loaded: 0,
         total: 0,
     }
@@ -25,4 +27,7 @@ export function end(id: string): void {
 }
 export function get(id: string): ProgressTask {
     return tasks[id];
+}
+export function all(): {[id: string]: ProgressTask} {
+    return tasks;
 }
