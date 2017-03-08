@@ -99,4 +99,8 @@ router.post("/tasks" , entities("tasks"));
 router.post("/tags" , entities("tags"));
 router.post("/teams" , entities("teams"));
 
+router.get("/progress" , function (req , res) {
+    
+})
+
 export = router;

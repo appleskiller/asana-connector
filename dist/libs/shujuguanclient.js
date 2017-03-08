@@ -27,12 +27,65 @@ function doRequest(params, resolve, reject) {
         }
     });
 }
+function convertColumnToCreat(columns) {
+    return [];
+}
+var DataTableAPI = (function () {
+    function DataTableAPI(datatable) {
+        datatable && (this._datatable = datatable);
+    }
+    DataTableAPI.prototype.me = function () {
+        return this._datatable;
+    };
+    DataTableAPI.prototype.instance = function (datatable) {
+        return new DataTableAPI(datatable);
+    };
+    DataTableAPI.prototype.findAll = function () {
+        return new Promise(function (resolve, reject) {
+            doRequest({
+                url: "https://" + enterprise + ".shujuguan.cn/openapi/data",
+                method: "GET",
+                headers: {
+                    "Authorization": "OAuth " + token,
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            }, resolve, reject);
+        });
+    };
+    DataTableAPI.prototype.create = function (data) {
+        var self = this;
+        return new Promise(function (resolve, reject) {
+            if (self._datatable) {
+                return resolve(self._datatable);
+            }
+            doRequest({
+                url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/createdatatable",
+                method: "POST",
+                headers: {
+                    "Authorization": "OAuth " + token,
+                    "Content-Type": "application/json; charset=utf-8"
+                },
+                json: true,
+                body: {
+                    "batchDataColumns": convertColumnToCreat(data.columns),
+                    "dataName": data.name
+                }
+            }, function (result) {
+                self._datatable = result;
+                resolve(self);
+            }, reject);
+        });
+    };
+    DataTableAPI.prototype.append = function (data) {
+    };
+    DataTableAPI.prototype.commit = function () {
+    };
+    return DataTableAPI;
+}());
 var ShujuguanClient = (function () {
-    function ShujuguanClient(token) {
-        this._token = token;
+    function ShujuguanClient() {
     }
     ShujuguanClient.prototype.datatables = function () {
-        var token = this._token;
         return new Promise(function (resolve, reject) {
             doRequest({
                 url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/createdatatable",
@@ -77,7 +130,7 @@ var ShujuguanClient = (function () {
     return ShujuguanClient;
 }());
 function create() {
-    return new ShujuguanClient(token);
+    return new ShujuguanClient();
 }
 exports.create = create;
 //# sourceMappingURL=shujuguanclient.js.map

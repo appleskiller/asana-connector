@@ -27,12 +27,13 @@ function doRequest(params, resolve, reject) {
 }
 
 function convertColumnToCreat (columns: Column[]): any[] {
-    {
-        "dataType": "STRING",
-        "length": -1,
-        "name": "a",
-        "type": "TEXT"
-    }
+    // {
+    //     "dataType": "STRING",
+    //     "length": -1,
+    //     "name": "a",
+    //     "type": "TEXT"
+    // }
+    return [];
 }
 
 type Column = {

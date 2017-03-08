@@ -54,14 +54,12 @@ var AsanaClient = (function () {
                 return reject(new Error("metaType invalid : " + metaType));
             }
             else {
-                var promises = [], projects = [];
+                var promises = [];
                 for (var i = 0; i < workspaces.length; i++) {
-                    promises.push(fetchList(client[metaType], { workspace: workspaces[i].id }).then(function (result) {
-                        projects = projects.concat(result);
-                    }));
+                    promises.push(fetchList(client[metaType], { workspace: workspaces[i].id }));
                 }
-                Promise.all(promises).then(function () {
-                    resolve(projects);
+                Promise.all(promises).then(function (resources) {
+                    resolve([].concat.apply([], resources));
                 }, reject);
             }
         });
@@ -83,6 +81,22 @@ var AsanaClient = (function () {
             }
         });
     };
+    AsanaClient.prototype.progressEntities = function (resType, ids, processor) {
+        var dispatcher = this._nativeClient[resType];
+        var progress = { current: 0, total: ids.length, error: 0, currentName: "" };
+        Promise.map(ids, function (id, index, length) {
+            return dispatcher.findById(id).then(function (res) {
+                progress.current++;
+                progress.currentName = res.name;
+                return processor(res);
+            }).catch(function ignore() {
+                progress.error++;
+            });
+        }, {
+            concurrency: 10
+        });
+        return progress;
+    };
     AsanaClient.prototype.teams = function (workspaces) {
         var client = this._nativeClient;
         return new Promise(function (resolve, reject) {
@@ -93,7 +107,7 @@ var AsanaClient = (function () {
             Promise.all(promises).then(function (results) {
                 var ret = [];
                 for (var i = 0; i < results.length; i++) {
-                    ret.push(results[i].data || []);
+                    ret = ret.concat(results[i].data || []);
                 }
                 resolve(ret);
             }, reject);

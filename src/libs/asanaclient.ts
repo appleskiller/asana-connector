@@ -71,18 +71,12 @@ class AsanaClient {
             if (!client[metaType]) {
                 return reject(new Error(`metaType invalid : ${metaType}`))
             } else {
-                var promises = [] , projects = [];
+                var promises = [];
                 for (var i: number = 0; i < workspaces.length; i++) {
-                    promises.push(fetchList(client[metaType] , {workspace: workspaces[i].id}).then(function (result) {
-                        projects = projects.concat(result);
-                    }));
+                    promises.push(fetchList(client[metaType] , {workspace: workspaces[i].id}));
                 }
-                promises.push(function (...args) {
-                    projects = projects.concat.apply(projects , args);
-                })
-                Promise.join.apply(Promise , promises)
-                Promise.all(promises).then(function () {
-                    resolve(projects);
+                Promise.all(promises).then(function (resources: Resource[][]) {
+                    resolve([].concat.apply([] , resources));
                 } , reject);
             }
         });
