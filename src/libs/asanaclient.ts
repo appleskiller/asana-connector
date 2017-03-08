@@ -87,6 +87,54 @@ class AsanaClient {
             }
         });
     }
+    entities(resType: string , ids: string[]): Promise<Resource[]> {
+        var client = this._nativeClient;
+        return new Promise(function (resolve , reject) {
+            if (!client[resType]) {
+                return reject(new Error(`resType invalid : ${resType}`));
+            } else {
+                var promises = [];
+                for (var i: number = 0; i < ids.length; i++) {
+                    promises.push(client[resType].findById(ids[i]));
+                }
+                Promise.all(promises).then(function (entities: Resource[]) {
+                    resolve(entities);
+                } , reject);
+            }
+        })
+    }
+    progressEntities(resType: string , ids: number[] , processor: (Resource) => Promise<any>): Promise<Resource[]> {
+        var dispatcher = this._nativeClient[resType];
+        var progress = {current: 0 , total: ids.length , error: 0 , currentName: ""};
+        Promise.map(ids , function (id: string , index: number , length: number) {
+            return dispatcher.findById(id).then(function (res: Resource) {
+                progress.current++;
+                progress.currentName = res.name;
+                return processor(res);
+            }).catch(function ignore() {
+                progress.error++;
+            })
+        } , {
+            concurrency: 10
+        });
+        return progress;
+    }
+    teams(workspaces: Workspaces[]): Promise<Teams[]> {
+        var client = this._nativeClient;
+        return new Promise(function (resolve , reject) {
+            var promises = [];
+            for (var i: number = 0; i < workspaces.length; i++) {
+                promises.push(client.teams.findByOrganization(workspaces[i].id));
+            }
+            Promise.all(promises).then(function (results: ResourceList<Resource>[]) {
+                var ret = [];
+                for (var i: number = 0; i < results.length; i++) {
+                    ret = ret.concat(results[i].data || [])
+                }
+                resolve(ret);
+            } , reject);
+        })
+    }
 }
 
 // Create an Asana client. Do this per request since it keeps state that

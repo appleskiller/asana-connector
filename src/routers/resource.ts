@@ -25,12 +25,34 @@ function metadatas(metaType: string) {
                 res.charset = 'utf-8';
                 res.send([]);
             } else {
-                asana.metadatas(metaType , asanauser.user.workspaces).then(function(result: asanaclient.Projects[]) {
+                asana.metadatas(metaType , asanauser.user.workspaces).then(function(result: asanaclient.Resource[]) {
                     log.log(`fetch metadatas ${metaType} end. count:` , result.length);
                     res.charset = 'utf-8';
                     res.send(result);
                 } , progressError(res));
             }
+        } else {
+            res.status(401);
+        }
+    }
+}
+
+function entities (resType: string) {
+    return function (req , res) {
+        log.log(`fetch entities ${resType}...`);
+        var ids = req.body.ids;
+        if (!ids || !ids.length) {
+            res.send([]);
+            return;
+        }
+        var asanauser = storage.get("asanauser");
+        if (asanauser) {
+            var asana = asanaclient.create(asanauser.token);
+            asana.entities(resType , ids).then(function(result: asanaclient.Resource[]) {
+                log.log(`fetch entities ${resType} end. count:` , result.length);
+                res.charset = 'utf-8';
+                res.send(result);
+            } , progressError(res));
         } else {
             res.status(401);
         }
@@ -51,5 +73,30 @@ router.get("/projects" , metadatas("projects"));
 router.get("/users" , metadatas("users"));
 router.get("/tasks" , metadatas("tasks"));
 router.get("/tags" , metadatas("tags"));
+router.get("/teams" , function (req , res) {
+    log.log(`fetch teams ...`);
+    var asanauser = storage.get("asanauser");
+    if (asanauser) {
+        var asana = asanaclient.create(asanauser.token);
+        if (!asanauser.user.workspaces || !asanauser.user.workspaces.length) {
+            res.charset = 'utf-8';
+            res.send([]);
+        } else {
+            asana.teams(asanauser.user.workspaces).then(function(result: asanaclient.Resource[]) {
+                log.log(`fetch teams end. count:` , result.length);
+                res.charset = 'utf-8';
+                res.send(result);
+            } , progressError(res));
+        }
+    } else {
+        res.status(401);
+    }
+})
+
+router.post("/projects" , entities("projects"));
+router.post("/users" , entities("users"));
+router.post("/tasks" , entities("tasks"));
+router.post("/tags" , entities("tags"));
+router.post("/teams" , entities("teams"));
 
 export = router;
