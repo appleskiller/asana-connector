@@ -77,6 +77,10 @@ class AsanaClient {
                         projects = projects.concat(result);
                     }));
                 }
+                promises.push(function (...args) {
+                    projects = projects.concat.apply(projects , args);
+                })
+                Promise.join.apply(Promise , promises)
                 Promise.all(promises).then(function () {
                     resolve(projects);
                 } , reject);
