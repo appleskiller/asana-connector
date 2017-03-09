@@ -2,7 +2,27 @@ $(document).ready(function () {
     var loadingPage = $(".loading-page");
     var signinPage = $(".signin-page");
     var resourcePage = $(".resource-page");
+    var monitorPage = $(".monitor-page");
+    
     var asanaUser = null;
+
+    function _onClickedHandle(type , id) {
+        return function () {
+            if (type === "projects") {
+                $.ajax({
+                    url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        name: "proj" ,
+                        projectId: id
+                    })
+                }).then(function(result) {
+                    console.log(result);
+                });
+            }
+        }
+    }
 
     function renderList(type , value) {
         var list = resourcePage.find("." + type + " .content");
@@ -13,6 +33,7 @@ $(document).ready(function () {
         for (var i = 0; i < value.length; i++) {
             var item = value[i];
             li = $('<li data-id="'+item.id+'">'+item.name+'</li>');
+            li.click(_onClickedHandle(type , item.id));
             ul.append(li);
         }
         list.append(ul);
@@ -29,24 +50,24 @@ $(document).ready(function () {
             });
         });
 
-        $.ajax({
-            url: 'https://localhost:18081/asana/resource/workspaces',
-            type: "GET"
-        }).then(function(result) {
-            renderList("workspaces",result);
-        });
-        $.ajax({
-            url: 'https://localhost:18081/asana/resource/teams',
-            type: "GET"
-        }).then(function(result) {
-            renderList("teams",result);
-        });
         // $.ajax({
-        //     url: 'https://localhost:18081/asana/resource/projects',
+        //     url: 'https://localhost:18081/asana/resource/workspaces',
         //     type: "GET"
         // }).then(function(result) {
-        //     renderList("projects",result);
+        //     renderList("workspaces",result);
         // });
+        // $.ajax({
+        //     url: 'https://localhost:18081/asana/resource/teams',
+        //     type: "GET"
+        // }).then(function(result) {
+        //     renderList("teams",result);
+        // });
+        $.ajax({
+            url: 'https://localhost:18081/asana/resource/projects',
+            type: "GET"
+        }).then(function(result) {
+            renderList("projects",result);
+        });
 
         // $.ajax({
         //     url: "https://localhost:18081/asana/resource/projects",
@@ -56,16 +77,47 @@ $(document).ready(function () {
         //         ids: [275995325944865]
         //     })
         // })
-        $.ajax({
-            url: "https://localhost:18081/asana/resource/tasks",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                ids: [285199443646363]
-            })
-        })
+        // $.ajax({
+        //     url: "https://localhost:18081/asana/resource/tasks",
+        //     type: "POST",
+        //     contentType: "application/json",
+        //     data: JSON.stringify({
+        //         ids: [285199443646363]
+        //     })
+        // })
     }
-
+    function renderMonitoring(progressTasks , noTaskMsg) {
+        var tasks = [];
+        if (progressTasks) {
+            for (var key in progressTasks) {
+                tasks.push(progressTasks[key]);
+            }
+        }
+        var taskList = monitorPage.find(".task-list");
+        monitorPage.find(".title span").html("");
+        if (!tasks.length) {
+            taskList.empty();
+            monitorPage.find(".title span").html(noTaskMsg ? " - " + noTaskMsg : " - Not any tasks.");
+        } else {
+            taskList.find(".task-item").addClass("deprecated");
+            for (var i = 0; i < tasks.length; i++) {
+                var task = tasks[i];
+                var item = taskList.find(".task-item[task-id="+task.id+"]");
+                if (!item.length) {
+                    item = $('<div class="task-item" task-id="'+task.id+'"></div>');
+                    item.append('<div class="task-name"></div>');
+                    item.append('<div class="task-progress"><div class="progress"></div></div>');
+                    taskList.prepend(item);
+                } else {
+                    item.removeClass("deprecated");
+                }
+                var loadInfo = [" | loaded: "+ task.loaded , "error: " + task.error , "total: " + task.total + " | "].join(" | ");
+                item.find(".task-name").html([task.info.name , loadInfo , task.current].join(" - "));
+                item.find(".progress").css("width" , 100*task.loaded/task.total + "%");
+            }
+            taskList.find(".task-item.deprecated").remove();
+        }
+    }
     function setAsanaUser(user) {
         loadingPage.hide();
         if (!user) {
@@ -96,12 +148,26 @@ $(document).ready(function () {
             setAsanaUser(user);
         })
         .always(function () {
-            setTimeout(detectUser , 1000);
+            setTimeout(detectUser , 1500);
         });
     }
     signinPage.find(".loginBtn").click(function () {
         window.open("https://localhost:18081/asana/connect" , "Asana Connector" , "location=no,menubar=no,toolbar=no,copyhistory=no");
     });
-
+    // monitoring
+    function monitoring() {
+        $.ajax({
+            type: "GET",
+            url: "https://localhost:18081/asana/resource/monitoring"
+        }).then(function (result) {
+            renderMonitoring(result);
+        }).always(function (xhr) {
+            if (xhr && xhr.status === 0) {
+                renderMonitoring({} , "offline");
+            }
+            setTimeout(monitoring , 1500);
+        })
+    }
     detectUser();
+    monitoring();
 })

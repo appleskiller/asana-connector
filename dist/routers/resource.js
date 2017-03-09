@@ -3,6 +3,7 @@ var express = require("express");
 var asanaclient = require("../libs/asanaclient");
 var Logger = require("../libs/logger");
 var cache = require("../libs/cache");
+var progress = require("../libs/progress");
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_resources");
 var router = express.Router();
@@ -96,5 +97,36 @@ router.post("/users", entities("users"));
 router.post("/tasks", entities("tasks"));
 router.post("/tags", entities("tags"));
 router.post("/teams", entities("teams"));
+router.get("/progress", function (req, res) {
+    res.charset = 'utf-8';
+    res.send(progress.all());
+});
+router.post("/upload/shujuguan/projects", function (req, res) {
+    var name = req.body.name;
+    var projectId = req.body.projectId;
+    if (!name || !projectId) {
+        res.status(500).send("invalid post body!");
+    }
+    else {
+        var asanauser = storage.get("asanauser");
+        if (asanauser) {
+            var asana = asanaclient.create(asanauser.token);
+            log.log("fetch tasksInProject ...");
+            asana.tasksInProject(projectId).then(function (tasks) {
+                log.log("fetch tasksInProject end. count:", tasks.length);
+                res.send(tasks);
+            }).catch(function (err) {
+                log.log("fetch tasksInProject error: ", err);
+                res.status(500).send(err);
+            });
+        }
+        else {
+            res.status(401);
+        }
+    }
+});
+router.get("/monitoring", function (req, res) {
+    res.send(progress.all());
+});
 module.exports = router;
 //# sourceMappingURL=resource.js.map

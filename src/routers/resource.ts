@@ -105,15 +105,31 @@ router.get("/progress" , function (req , res) {
     res.send(progress.all());
 })
 
-router.post("/upload/shujuguan" , function (req , res) {
+router.post("/upload/shujuguan/projects" , function (req , res) {
     var name = req.body.name;
     var projectId = req.body.projectId;
     if (!name || !projectId) {
         res.status(500).send("invalid post body!");
     } else {
-        
+        var asanauser = storage.get("asanauser");
+        if (asanauser) {
+            var asana = asanaclient.create(asanauser.token);
+            log.log(`fetch tasksInProject ...`);
+            asana.tasksInProject(projectId).then(function (tasks: asanaclient.Resource[]) {
+                log.log(`fetch tasksInProject end. count:` , tasks.length);
+                res.send(tasks);
+            }).catch(function (err) {
+                log.log(`fetch tasksInProject error: ` , err);
+                res.status(500).send(err);
+            })
+        } else {
+            res.status(401);
+        }
     }
 })
 
+router.get("/monitoring" , function (req , res) {
+    res.send(progress.all())
+})
 
 export = router;
