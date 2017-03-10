@@ -19,7 +19,7 @@ function create(total, taskInfo) {
 }
 exports.create = create;
 function end(id, afterTake) {
-    if (afterTake === void 0) { afterTake = 6000; }
+    if (afterTake === void 0) { afterTake = 3000; }
     tasks[id] && (tasks[id].loaded = tasks[id].total);
     if (afterTake >= 0) {
         setTimeout(function () { delete tasks[id]; }, afterTake);

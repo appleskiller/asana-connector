@@ -62,12 +62,12 @@ $(document).ready(function () {
         // }).then(function(result) {
         //     renderList("teams",result);
         // });
-        $.ajax({
-            url: 'https://localhost:18081/asana/resource/projects',
-            type: "GET"
-        }).then(function(result) {
-            renderList("projects",result);
-        });
+        // $.ajax({
+        //     url: 'https://localhost:18081/asana/resource/projects',
+        //     type: "GET"
+        // }).then(function(result) {
+        //     renderList("projects",result);
+        // });
 
         // $.ajax({
         //     url: "https://localhost:18081/asana/resource/projects",
@@ -77,14 +77,14 @@ $(document).ready(function () {
         //         ids: [275995325944865]
         //     })
         // })
-        // $.ajax({
-        //     url: "https://localhost:18081/asana/resource/tasks",
-        //     type: "POST",
-        //     contentType: "application/json",
-        //     data: JSON.stringify({
-        //         ids: [285199443646363]
-        //     })
-        // })
+        $.ajax({
+            url: "https://localhost:18081/asana/resource/tasks",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                ids: [285199443646363]
+            })
+        })
     }
     function renderMonitoring(progressTasks , noTaskMsg) {
         var tasks = [];
