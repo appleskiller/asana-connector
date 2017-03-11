@@ -10,22 +10,22 @@ var port = process.env['PORT'] || 18081;
 
 type CustomFieldSetting = {
     custom_field: {
-        id: number,
-        name: string,
-        type: string
+        id: number;
+        name: string;
+        type: string;
     }
 }
 interface ITasks extends Asana.resources.Tasks.Type {
     subtasks?: ITasks[];
     custom_fields?: {
-        id: number,
-        name: string,
-        type: string
+        id: number;
+        name: string;
+        type: string;
     }[]
 }
 interface IProjects extends Asana.resources.Projects.Type {
     tasks?: ITasks[];
-    custom_field_settings?: CustomFieldSetting[]
+    custom_field_settings?: CustomFieldSetting[];
 }
 
 export type Resource = Asana.resources.Resource;

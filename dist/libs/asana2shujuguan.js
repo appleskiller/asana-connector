@@ -1,7 +1,5 @@
 "use strict";
-var Promise = require('bluebird');
 var Logger = require("../libs/logger");
-var progress = require("./progress");
 var log = Logger.getLogger("asana2shujuguan");
 function any2any(v) {
     return v;
@@ -190,60 +188,7 @@ function appendCustomFieldValue(columns, rowdata, project, task) {
     }
 }
 function uploadTasksTableWithProject(asana, shujuguan, projectId, dtid) {
-    return asana.tasksInProject(projectId).then(function (project) {
-        return shujuguan.datatables.findById(dtid).catch(function (err) {
-            return Promise.resolve(null);
-        }).then(function (datatable) {
-            if (!datatable) {
-                log.log("datatable[" + dtid + "] not found! creating to shujuguan...");
-                return shujuguan.datatables.create(createTaskTableByProject(project)).then(function (datatable) {
-                    log.log("created to shujuguan");
-                    return Promise.resolve({
-                        project: project,
-                        datatable: datatable._datatable
-                    });
-                });
-            }
-            else {
-                return Promise.resolve({
-                    project: project,
-                    datatable: datatable
-                });
-            }
-        });
-    }).then(function (result) {
-        log.log("ready for upload to shujuguan.");
-        var token = progress.create(project.tasks.length, {
-            method: "asanaclient.uploadTasksTableWithProject",
-            type: "tasks",
-            name: "upload tasks: " + project.name + " => " + datatable.name
-        });
-        var project = result.project;
-        var datatable = result.datatable;
-        return Promise.map(project.tasks, function (item, index, length) {
-            return asana.taskEntities(item).then(function (task) {
-                var rowdata;
-                for (var i = 0; i < taskTableHeader.length; i++) {
-                    rowdata.push(getTaskDataValue(taskTableHeader[i], item));
-                }
-                appendCustomFieldValue(datatable.columns, rowdata, project, item);
-                return shujuguan.datatables.append(rowdata).then(function () {
-                    token.loaded++;
-                    token.current = task.name;
-                });
-            }).catch(function ignore() {
-                token.loaded++;
-                token.error++;
-            });
-        }, {
-            concurrency: 1
-        }).then(function () {
-            return shujuguan.datatables.commit();
-        }).then(function () {
-            progress.end(token.id);
-            return Promise.resolve();
-        });
-    });
+    return null;
 }
 exports.uploadTasksTableWithProject = uploadTasksTableWithProject;
 //# sourceMappingURL=asana2shujuguan.js.map

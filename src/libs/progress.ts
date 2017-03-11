@@ -2,6 +2,7 @@ import * as _ from "lodash";
 
 type TaskInfo = {
     name: string;
+    id?: string|number;
     [prop: string]: any;
 }
 export type ProgressTask = {
