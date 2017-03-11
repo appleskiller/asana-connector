@@ -126,16 +126,20 @@ export class AsanaClient {
                         token.loaded++;
                         token.current = workspaces[index].name;
                         metas = metas.concat(results);
-                    }).catch(function ignore() {
+                    }).catch(function ignore(err) {
+                        console.log("metadatas - ignore error: " , err);
                         token.loaded++;
                         token.error++;
                     })
                 }, {
-                        concurrency: 1
-                    }).then(function () {
-                        progress.end(token.id);
-                        resolve(metas);
-                    });
+                    concurrency: 1
+                }).then(function () {
+                    progress.end(token.id);
+                    resolve(metas);
+                }).catch(function (err) {
+                    progress.end(token.id);
+                    return Promise.reject(err);
+                });
             }
         });
     }
@@ -168,16 +172,20 @@ export class AsanaClient {
                     token.loaded++;
                     token.current = res.name;
                     return processor(res);
-                }).catch(function ignore() {
+                }).catch(function ignore(err) {
+                    console.log("progressEntities - ignore error:" , err);
                     token.loaded++;
                     token.error++;
                 })
             }, {
-                    concurrency: 10
-                }).then(function (results: Resource[]) {
-                    progress.end(token.id);
-                    resolve(results);
-                });
+                concurrency: 10
+            }).then(function (results: Resource[]) {
+                progress.end(token.id);
+                resolve(results);
+            }).catch(function (err) {
+                progress.end(token.id);
+                return Promise.reject(err);
+            });
         })
     }
     teams(workspaces: Workspaces[]): Promise<Teams[]> {
@@ -218,16 +226,20 @@ export class AsanaClient {
                             task.subtasks = subtasks;
                             token.loaded++;
                             token.current = task.name;
-                        }).catch(function ignore() {
+                        }).catch(function ignore(err) {
+                            console.log("tasksInProject - fetch all subtasks error:" , err);
                             token.loaded++;
                             token.error++;
-                        });
+                        })
                     }, {
                         concurrency: 10
                     }).then(function () {
                         progress.end(token.id);
                         resolve(project);
-                    })
+                    }).catch(function (err) {
+                        progress.end(token.id);
+                        return Promise.reject(err);
+                    });
                 }).catch(function (err) {
                     reject(err);
                 })

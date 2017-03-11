@@ -47,7 +47,9 @@ h4 {
     padding-left: 8px;
     padding-right: 8px;
 }
-.monitor-page .task-list .task-item{}
+.monitor-page .task-list .task-item{
+    padding: 2px 0px;
+}
 .monitor-page .task-list .task-item .task-progress{
     height: 6px;
     background-color: #E5E5E5;
@@ -56,10 +58,10 @@ h4 {
     background-color: #64CFF1;
     height: 100%;
     border-radius: 3px;
-    transition: width 2s;
-    -moz-transition: width 2s;/* Firefox 4 */
-    -webkit-transition: width 2s;/* Safari 和 Chrome */
-    -o-transition: width 2s;/* Opera */
+    transition: width 1s;
+    -moz-transition: width 1s;/* Firefox 4 */
+    -webkit-transition: width 1s;/* Safari 和 Chrome */
+    -o-transition: width 1s;/* Opera */
 }
 .signin-page{
     height: 100%;
@@ -77,6 +79,10 @@ h4 {
     left: 0;
     right: 0;
     top: 100px;
+}
+.signin-page .loginBtn[disabled=disabled] {
+    box-shadow: none;
+    cursor: default;
 }
 .resource-page {
     background-color: #EEE;

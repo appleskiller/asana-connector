@@ -99,9 +99,6 @@ var taskTableHeader: HeaderProp[] = [
 	{property: "hearts" , name: "hearts" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2name},
 	{property: "hearts" , name: "hearts_id" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2id},
 	{property: "hearts" , name: "hearts_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: array2count},
-	{property: "memberships" , name: "memberships" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2name},
-	{property: "memberships" , name: "memberships_id" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2id},
-	{property: "memberships" , name: "memberships_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: array2count},
     {property: "tags" , name: "tags" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2name},
 	{property: "tags" , name: "tags_id" , dataType: "STRING" , columnType: "TEXT" , valueConverter: array2id},
 	{property: "tags" , name: "tags_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: array2count},
@@ -135,7 +132,8 @@ function createTaskTableByProject(project: asanaclient.Projects): shujuguanclien
         columns.push({
             name: item.name ,
             dataType: item.dataType ,
-            columnType: item.columnType
+            columnType: item.columnType,
+			length: -1
         });
     }
     // 2. 处理custom field
@@ -145,7 +143,8 @@ function createTaskTableByProject(project: asanaclient.Projects): shujuguanclien
             columns.push({
                 name: "field_" + element.custom_field.name ,
                 dataType: convertFieldType2DataType(element.custom_field.type),
-                columnType: convertFieldType2ColumnType(element.custom_field.type)
+                columnType: convertFieldType2ColumnType(element.custom_field.type),
+				length: -1
             })
         }
     }
@@ -199,80 +198,64 @@ function appendCustomFieldValue(columns: shujuguanclient.Column[] , rowdata: any
     }
 }
 export function uploadTasksTableWithProject(asana: asanaclient.AsanaClient , shujuguan: shujuguanclient.ShujuguanClient , projectId: number , dtid?: string): Promise<any> {
-    return asana.tasksInProject(projectId).then(function (project: asanaclient.Projects) {
+    dtid = dtid || "__invalid table id__";
+	return asana.tasksInProject(projectId).then(function (project: asanaclient.Projects) {
         return shujuguan.datatables.findById(dtid).catch(function (err) {
             return Promise.resolve(null);
         }).then(function (datatable: shujuguanclient.DataTable) {
             if (!datatable) {
                 log.log(`datatable[${dtid}] not found! creating to shujuguan...`)
-                return shujuguan.datatables.create(createTaskTableByProject(project)).then(function (datatable: {_datatable: shujuguanclient.DataTable}) {
+                return shujuguan.datatables.create(createTaskTableByProject(project)).then(function (datatable: shujuguanclient.DataTable) {
                     log.log(`created to shujuguan`)
-                    return Promise.resolve({
-                        project: project , 
-                        datatable: datatable._datatable
-                    });
+					return Promise.resolve({ project: project , datatable: datatable });
                 })
             } else {
-                return Promise.resolve({
-                    project: project , 
-                    datatable: datatable
-                });
+				return shujuguan.datatables.update(datatable.id , datatable.columns , true).then(function (datatable: shujuguanclient.DataTable) {
+                	return Promise.resolve({ project: project , datatable: datatable });
+				})
             }
         })
-    }).then(function (result: {project: asanaclient.Projects , datatable: shujuguanclient.DataTable}) {
+    }).then(function (result: any) {
         log.log("ready for upload to shujuguan.");
         // return Promise.resolve(result.datatable);
+        var project = result.project;
+        var datatable = result.datatable;
         var token = progress.create(project.tasks.length, {
             method: "asanaclient.uploadTasksTableWithProject",
             type: "tasks",
             name: `upload tasks: ${project.name} => ${datatable.name}`
         });
-        var project = result.project;
-        var datatable = result.datatable;
-        return Promise.map(project.tasks , function (item: asanaclient.Tasks , index: number , length: number) {
+        return Promise.each(project.tasks , function (item: asanaclient.Tasks , index: number , length: number) {
             return asana.taskEntities(item).then(function (task: asanaclient.Tasks) {
-                var rowdata: any[];
+                var rowdata: any[] = [];
                 // 1. 处理taskTableHeader
                 for (var i = 0; i < taskTableHeader.length; i++) {
-                    rowdata.push(getTaskDataValue(taskTableHeader[i] , item))
+                    rowdata.push(getTaskDataValue(taskTableHeader[i] , task))
                 }
                 // 2. 处理custom field
-                appendCustomFieldValue(datatable.columns , rowdata , project , item);
+                appendCustomFieldValue(datatable.columns , rowdata , project , task);
                 // append datas;
-                return shujuguan.datatables.append(rowdata).then(function () {
+                return shujuguan.datatables.append(datatable.id , [rowdata]).then(function () {
                     token.loaded++;
                     token.current = task.name;
+					log.log("uploadTasksTableWithProject.append rowdata - " , token.loaded);
                 })
-            }).catch(function ignore() {
+            }).catch(function ignore(err) {
+				log.log("uploadTasksTableWithProject error" , err);
                 token.loaded++;
                 token.error++;
             });
-        } , {
-            concurrency: 1
         }).then(function () {
-            return shujuguan.datatables.commit();
+			log.log("commit to shujuguan...");
+            return shujuguan.datatables.commit(datatable.id);
         }).then(function () {
+			log.log("commited!");
             progress.end(token.id);
             return Promise.resolve();
-        })
+        }).catch(function (err) {
+			log.log(`commit to shujuguan failed ! dt:${datatable.id}`);
+			progress.end(token.id);
+			return Promise.reject(err);
+		})
     })
 }
-
-// archived: false
-// color: "dark-teal"
-// created_at: "2017-02-20T06:38:45.790Z"
-// current_status: null
-// custom_field_settings: Array[2]
-// due_date: null
-// followers: Array[1]
-// id: 275995325944865
-// layout: "list"
-// members: Array[1]
-// modified_at: "2017-03-10T06:52:03.708Z"
-// name: "S42B"
-// notes: ""
-// owner: Object
-// public: true
-// tasks: Array[48]
-// team: Object
-// workspace: Object

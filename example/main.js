@@ -153,12 +153,17 @@ $(document).ready(function () {
             var user = (result && result.connected) ? result.user : null;
             setAsanaUser(user);
         })
-        .always(function () {
-            setTimeout(detectUser , 1500);
+        .always(function (xhr) {
+            var time = 2000;
+            if (xhr && xhr.status === 0) {
+                time = 4000;
+            }
+            setTimeout(detectUser , time);
         });
     }
     signinPage.find(".loginBtn").click(function () {
         window.open("https://localhost:18081/asana/connect" , "Asana Connector" , "location=no,menubar=no,toolbar=no,copyhistory=no");
+        signinPage.find(".loginBtn").html("Authorized in Asana...").attr("disabled" , "disabled");
     });
     // monitoring
     function monitoring() {
@@ -168,10 +173,12 @@ $(document).ready(function () {
         }).then(function (result) {
             renderMonitoring(result);
         }).always(function (xhr) {
+            var time = 2000;
             if (xhr && xhr.status === 0) {
+                time = 4000;
                 renderMonitoring({} , "offline");
             }
-            setTimeout(monitoring , 1500);
+            setTimeout(monitoring , time);
         })
     }
     detectUser();

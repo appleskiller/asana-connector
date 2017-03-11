@@ -1,6 +1,7 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Asana = require("asana");
-var Promise = require('bluebird');
+var Promise = require("bluebird");
 var progress = require("./progress");
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
@@ -88,7 +89,8 @@ var AsanaClient = (function () {
                         token.loaded++;
                         token.current = workspaces[index].name;
                         metas = metas.concat(results);
-                    }).catch(function ignore() {
+                    }).catch(function ignore(err) {
+                        console.log("metadatas - ignore error: ", err);
                         token.loaded++;
                         token.error++;
                     });
@@ -97,6 +99,9 @@ var AsanaClient = (function () {
                 }).then(function () {
                     progress.end(token.id);
                     resolve(metas);
+                }).catch(function (err) {
+                    progress.end(token.id);
+                    return Promise.reject(err);
                 });
             }
         });
@@ -131,7 +136,8 @@ var AsanaClient = (function () {
                     token.loaded++;
                     token.current = res.name;
                     return processor(res);
-                }).catch(function ignore() {
+                }).catch(function ignore(err) {
+                    console.log("progressEntities - ignore error:", err);
                     token.loaded++;
                     token.error++;
                 });
@@ -140,6 +146,9 @@ var AsanaClient = (function () {
             }).then(function (results) {
                 progress.end(token.id);
                 resolve(results);
+            }).catch(function (err) {
+                progress.end(token.id);
+                return Promise.reject(err);
             });
         });
     };
@@ -178,7 +187,8 @@ var AsanaClient = (function () {
                             task.subtasks = subtasks;
                             token.loaded++;
                             token.current = task.name;
-                        }).catch(function ignore() {
+                        }).catch(function ignore(err) {
+                            console.log("tasksInProject - fetch all subtasks error:", err);
                             token.loaded++;
                             token.error++;
                         });
@@ -187,6 +197,9 @@ var AsanaClient = (function () {
                     }).then(function () {
                         progress.end(token.id);
                         resolve(project);
+                    }).catch(function (err) {
+                        progress.end(token.id);
+                        return Promise.reject(err);
                     });
                 }).catch(function (err) {
                     reject(err);

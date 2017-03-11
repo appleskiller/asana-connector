@@ -6,26 +6,28 @@ var config = require("../../config/server.json");
 var token = config.shujuguan.token;
 var enterprise = config.shujuguan.enterprise;
 
-function doRequest(params, resolve, reject) {
-    request(params, function (err, res, payload) {
-        if (err) {
-            return reject(err);
-        }
-        if (res.statusCode !== 200) {
-            return reject(payload);
-        }
-        try {
-            var result = (typeof payload === "string") ? JSON.parse(payload) : payload;
-        } catch (err) {
-            console.log("parse json error!" , payload);
-            return reject(new Error("parse json error!"))
-        }
-        if (result.error) {
-            return reject(new Error(result.error_description));
-        } else {
-            return resolve(result);
-        }
-    });
+function doRequest(params) {
+    return new Promise(function (resolve , reject) {
+        request(params, function (err, res, payload) {
+            if (err) {
+                return reject(err);
+            }
+            if (res.statusCode !== 200) {
+                return reject(payload);
+            }
+            try {
+                var result = (typeof payload === "string") ? JSON.parse(payload) : payload;
+            } catch (err) {
+                console.log("parse json error!" , payload);
+                return reject(new Error("parse json error!"))
+            }
+            if (result.error) {
+                return reject(new Error(result.error_description));
+            } else {
+                return resolve(result);
+            }
+        });
+    })
 }
 
 var _propMap = {
@@ -61,99 +63,81 @@ export type DataTable = {
 }
 
 class DataTableAPI {
-    private _datatable: DataTable;
-    constructor (datatable?: DataTable) {
-        datatable && (this._datatable = datatable);
-    }
-    me():DataTable {
-        return this._datatable;
-    }
-    instance(datatable: DataTable): DataTableAPI {
-        return new DataTableAPI(datatable);
-    }
     findAll(): Promise<DataTable[]> {
-        return new Promise(function (resolve, reject) {
-            doRequest({
-                url: `https://${enterprise}.shujuguan.cn/openapi/data`,
-                method: "GET",
-                headers: {
-                    "Authorization": `OAuth ${token}`,
-                    "Content-Type": "application/json; charset=utf-8"
-                }
-            }, resolve, reject);
-        });
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/data`,
+            method: "GET",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
+            }
+        })
     }
     findById(dtid: string): Promise<DataTable> {
-        return new Promise(function (resolve, reject) {
-            doRequest({
-                url: `https://${enterprise}.shujuguan.cn/openapi/data/${dtid}`,
-                method: "GET",
-                headers: {
-                    "Authorization": `OAuth ${token}`,
-                    "Content-Type": "application/json; charset=utf-8"
-                }
-            }, resolve, reject);
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/data/${dtid}`,
+            method: "GET",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
+            }
         });
     }
-    create(data: DataTable): Promise<DataTableAPI> {
+    create(data: DataTable): Promise<DataTable> {
         var self = this;
-        return new Promise(function (resolve, reject) {
-            if (self._datatable) {
-                return resolve(self._datatable);
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/createdatatable`,
+            method: "POST",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
+            },
+            json: true,
+            body: {
+                "batchDataColumns": convertColumnToCreat(data.columns),
+                "dataName": data.name
             }
-            doRequest({
-                url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/createdatatable`,
-                method: "POST",
-                headers: {
-                    "Authorization": `OAuth ${token}`,
-                    "Content-Type": "application/json; charset=utf-8"
-                },
-                json: true,
-                body: {
-                    "batchDataColumns": convertColumnToCreat(data.columns),
-                    "dataName": data.name
-                }
-            }, function (result: DataTable) {
-                self._datatable = result;
-                resolve(self);
-            }, reject);
         });
     }
-    append(data: any[]): Promise<DataTableAPI> {
+    update(dtid: string , columns: Column[] , append: boolean = false): Promise<DataTable> {
         var self = this;
-        return new Promise(function (resolve , reject) {
-            if (!self._datatable) {
-                reject();
-            } else {
-                doRequest({
-                    url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${self._datatable.id}/appenddatas`,
-                    method: "POST",
-                    headers: {
-                        "Authorization": `OAuth ${token}`,
-                        "Content-Type": "application/json; charset=utf-8"
-                    },
-                    json: true,
-                    body: data
-                }, resolve , reject);
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${dtid}/updatedatatable`,
+            method: "POST",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
+            },
+            json: true,
+            body: {
+                append: append,
+                batchDataColumns: columns
             }
-        })
+        });
     }
-    commit(): Promise<DataTableAPI> {
+    append(dtid: string , data: any[]): Promise<DataTableAPI> {
         var self = this;
-        return new Promise(function (resolve , reject) {
-            if (!self._datatable) {
-                reject();
-            } else {
-                doRequest({
-                    url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${self._datatable.id}/commit`,
-                    method: "GET",
-                    headers: {
-                        "Authorization": `OAuth ${token}`,
-                        "Content-Type": "application/json; charset=utf-8"
-                    }
-                }, resolve , reject);
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${dtid}/appenddatas`,
+            method: "POST",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
+            },
+            json: true,
+            body: data
+        });
+    }
+    commit(dtid: string): Promise<DataTable> {
+        var self = this;
+        return doRequest({
+            url: `https://${enterprise}.shujuguan.cn/openapi/dtbatch/${dtid}/commit`,
+            method: "GET",
+            headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "application/json; charset=utf-8"
             }
-        })
+        });
     }
 }
 
