@@ -8,11 +8,24 @@ var clientSecret = config.asana.clientSecret;
 var redirectUri = config.asana.redirectUri;
 var port = process.env['PORT'] || 18081;
 
+type CustomFieldSetting = {
+    custom_field: {
+        id: number,
+        name: string,
+        type: string
+    }
+}
 interface ITasks extends Asana.resources.Tasks.Type {
     subtasks?: ITasks[];
+    custom_fields?: {
+        id: number,
+        name: string,
+        type: string
+    }[]
 }
 interface IProjects extends Asana.resources.Projects.Type {
     tasks?: ITasks[];
+    custom_field_settings?: CustomFieldSetting[]
 }
 
 export type Resource = Asana.resources.Resource;
@@ -126,7 +139,7 @@ export class AsanaClient {
             }
         });
     }
-    entities(resType: string, ids: string[]): Promise<Resource[]> {
+    entities(resType: string, ids: number[]): Promise<Resource[]> {
         var client = this._nativeClient;
         return new Promise(function (resolve, reject) {
             if (!client[resType]) {
@@ -195,7 +208,7 @@ export class AsanaClient {
             client.projects.findById(projectId).then(function (project: Projects) {
                 fetchListById(client.projects, "tasks", projectId).then(function (tasks: Tasks[]) {
                     token.info.id = project.id;
-                    token.info.name = project.name;
+                    token.info.name = "fetch project tasks: " + project.name;
                     token.total = tasks.length;
 
                     project.tasks = tasks;
@@ -210,11 +223,11 @@ export class AsanaClient {
                             token.error++;
                         });
                     }, {
-                            concurrency: 10
-                        }).then(function () {
-                            progress.end(token.id);
-                            resolve(project);
-                        })
+                        concurrency: 10
+                    }).then(function () {
+                        progress.end(token.id);
+                        resolve(project);
+                    })
                 }).catch(function (err) {
                     reject(err);
                 })
@@ -222,6 +235,31 @@ export class AsanaClient {
                 reject(err);
             })
         });
+    }
+    taskEntities(task: Tasks): Promise<Tasks[]> {
+        var client = this._nativeClient;
+        var self = this;
+        var subs = task.subtasks ? task.subtasks : [];
+        var ids: number[] = [];
+        for (var i = 0; i < subs.length; i++) {
+            subs[i] && ids.push(subs[i].id);
+        }
+        return client.tasks.findById(task.id)
+            .then((result: Tasks) => {
+                return Promise.resolve(result);
+            })
+            .then((result: Tasks) => {
+                return self.entities("tasks" , ids).then((subtasks: Tasks[]) => {
+                    result.subtasks = subtasks;
+                    return Promise.resolve(result);
+                })
+            })
+            .then((result: Tasks) => {
+                return Promise.resolve(result);
+            })
+            .catch((err) => {
+                return Promise.reject(err);
+            });
     }
 }
 

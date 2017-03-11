@@ -3,7 +3,9 @@ var express = require("express");
 var asanaclient = require("../libs/asanaclient");
 var Logger = require("../libs/logger");
 var cache = require("../libs/cache");
+var shujuguanclient = require("../libs/shujuguanclient");
 var progress = require("../libs/progress");
+var asana2shujuguan = require("../libs/asana2shujuguan");
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_resources");
 var router = express.Router();
@@ -102,21 +104,20 @@ router.get("/progress", function (req, res) {
     res.send(progress.all());
 });
 router.post("/upload/shujuguan/projects", function (req, res) {
-    var name = req.body.name;
+    var datatableId = req.body.datatableId;
     var projectId = req.body.projectId;
-    if (!name || !projectId) {
+    if (!projectId) {
         res.status(500).send("invalid post body!");
     }
     else {
         var asanauser = storage.get("asanauser");
         if (asanauser) {
             var asana = asanaclient.create(asanauser.token);
+            var shujuguan = shujuguanclient.create();
             log.log("fetch tasksInProject ...");
-            asana.tasksInProject(projectId).then(function (tasks) {
-                log.log("fetch tasksInProject end. count:", tasks.length);
-                res.send(tasks);
+            asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, projectId, datatableId).then(function (datatable) {
+                res.send(datatable);
             }).catch(function (err) {
-                log.log("fetch tasksInProject error: ", err);
                 res.status(500).send(err);
             });
         }

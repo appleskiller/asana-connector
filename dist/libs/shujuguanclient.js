@@ -1,7 +1,6 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-var Promise = require("bluebird");
-var request = require("request");
+var Promise = require('bluebird');
+var request = require('request');
 var _ = require("lodash");
 var config = require("../../config/server.json");
 var token = config.shujuguan.token;
@@ -15,9 +14,10 @@ function doRequest(params, resolve, reject) {
             return reject(payload);
         }
         try {
-            var result = JSON.parse(payload);
+            var result = (typeof payload === "string") ? JSON.parse(payload) : payload;
         }
         catch (err) {
+            console.log("parse json error!", payload);
             return reject(new Error("parse json error!"));
         }
         if (result.error) {
@@ -45,25 +45,6 @@ function convertColumnToCreat(columns) {
     });
     return results;
 }
-function convertRowDatas(columns, rowData) {
-    var results = [], row;
-    _.each(rowData, function (data) {
-        row = [];
-        _.each(columns, function (column, index) {
-            var name = column.name;
-            var value = rowData[name];
-            if (_.isNil(value)) {
-                value = null;
-            }
-            else if (column.dataType === "DATE") {
-                value = (new Date(value)).getTime();
-            }
-            row[index] = value;
-        });
-        results.push(row);
-    });
-    return results;
-}
 var DataTableAPI = (function () {
     function DataTableAPI(datatable) {
         datatable && (this._datatable = datatable);
@@ -78,6 +59,18 @@ var DataTableAPI = (function () {
         return new Promise(function (resolve, reject) {
             doRequest({
                 url: "https://" + enterprise + ".shujuguan.cn/openapi/data",
+                method: "GET",
+                headers: {
+                    "Authorization": "OAuth " + token,
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            }, resolve, reject);
+        });
+    };
+    DataTableAPI.prototype.findById = function (dtid) {
+        return new Promise(function (resolve, reject) {
+            doRequest({
+                url: "https://" + enterprise + ".shujuguan.cn/openapi/data/" + dtid,
                 method: "GET",
                 headers: {
                     "Authorization": "OAuth " + token,
@@ -125,7 +118,7 @@ var DataTableAPI = (function () {
                         "Content-Type": "application/json; charset=utf-8"
                     },
                     json: true,
-                    body: convertRowDatas(self._datatable.columns, data)
+                    body: data
                 }, resolve, reject);
             }
         });
@@ -156,6 +149,7 @@ var ShujuguanClient = (function () {
     }
     return ShujuguanClient;
 }());
+exports.ShujuguanClient = ShujuguanClient;
 function create() {
     return new ShujuguanClient();
 }

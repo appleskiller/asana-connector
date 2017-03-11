@@ -15,8 +15,9 @@ function doRequest(params, resolve, reject) {
             return reject(payload);
         }
         try {
-            var result = JSON.parse(payload);
+            var result = (typeof payload === "string") ? JSON.parse(payload) : payload;
         } catch (err) {
+            console.log("parse json error!" , payload);
             return reject(new Error("parse json error!"))
         }
         if (result.error) {
@@ -47,39 +48,18 @@ function convertColumnToCreat (columns: Column[]): any[] {
     return results;
 }
 
-function convertRowDatas(columns: Column[] , rowData: RowData[]): any[]{
-    var results = [] , row;
-    _.each(rowData , function (data: RowData) {
-        row = [];
-        _.each(columns , function (column: Column , index: number) {
-            var name = column.name;
-            var value = rowData[name];
-            if (_.isNil(value)) {
-                value = null;
-            } else if (column.dataType === "DATE") {
-                value = (new Date(value)).getTime();
-            }
-            row[index] = value;
-        });
-        results.push(row);
-    })
-    return results;
-}
-
-type Column = {
+export type Column = {
     columnType: string;
     dataType: string;
     name: string;
     length?: number;
 }
-type DataTable = {
+export type DataTable = {
     columns: Column[];
     name: string;
     id?: string;
 }
-type RowData = {
-    [name: string]: any
-}
+
 class DataTableAPI {
     private _datatable: DataTable;
     constructor (datatable?: DataTable) {
@@ -95,6 +75,18 @@ class DataTableAPI {
         return new Promise(function (resolve, reject) {
             doRequest({
                 url: `https://${enterprise}.shujuguan.cn/openapi/data`,
+                method: "GET",
+                headers: {
+                    "Authorization": `OAuth ${token}`,
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            }, resolve, reject);
+        });
+    }
+    findById(dtid: string): Promise<DataTable> {
+        return new Promise(function (resolve, reject) {
+            doRequest({
+                url: `https://${enterprise}.shujuguan.cn/openapi/data/${dtid}`,
                 method: "GET",
                 headers: {
                     "Authorization": `OAuth ${token}`,
@@ -127,7 +119,7 @@ class DataTableAPI {
             }, reject);
         });
     }
-    append(data: RowData[]): Promise<DataTableAPI> {
+    append(data: any[]): Promise<DataTableAPI> {
         var self = this;
         return new Promise(function (resolve , reject) {
             if (!self._datatable) {
@@ -141,7 +133,7 @@ class DataTableAPI {
                         "Content-Type": "application/json; charset=utf-8"
                     },
                     json: true,
-                    body: convertRowDatas(self._datatable.columns , data)
+                    body: data
                 }, resolve , reject);
             }
         })
@@ -165,7 +157,7 @@ class DataTableAPI {
     }
 }
 
-class ShujuguanClient {
+export class ShujuguanClient {
     datatables: DataTableAPI;
     constructor(){
         this.datatables = new DataTableAPI();

@@ -1,7 +1,6 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 var Asana = require("asana");
-var Promise = require("bluebird");
+var Promise = require('bluebird');
 var progress = require("./progress");
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
@@ -171,12 +170,12 @@ var AsanaClient = (function () {
             client.projects.findById(projectId).then(function (project) {
                 fetchListById(client.projects, "tasks", projectId).then(function (tasks) {
                     token.info.id = project.id;
-                    token.info.name = project.name;
+                    token.info.name = "fetch project tasks: " + project.name;
                     token.total = tasks.length;
-                    project["tasks"] = tasks;
+                    project.tasks = tasks;
                     Promise.map(tasks, function (task, index, length) {
                         return fetchListById(client.tasks, "subtasks", task.id).then(function (subtasks) {
-                            task["subtasks"] = subtasks;
+                            task.subtasks = subtasks;
                             token.loaded++;
                             token.current = task.name;
                         }).catch(function ignore() {
@@ -197,8 +196,34 @@ var AsanaClient = (function () {
             });
         });
     };
+    AsanaClient.prototype.taskEntities = function (task) {
+        var client = this._nativeClient;
+        var self = this;
+        var subs = task.subtasks ? task.subtasks : [];
+        var ids = [];
+        for (var i = 0; i < subs.length; i++) {
+            subs[i] && ids.push(subs[i].id);
+        }
+        return client.tasks.findById(task.id)
+            .then(function (result) {
+            return Promise.resolve(result);
+        })
+            .then(function (result) {
+            return self.entities("tasks", ids).then(function (subtasks) {
+                result.subtasks = subtasks;
+                return Promise.resolve(result);
+            });
+        })
+            .then(function (result) {
+            return Promise.resolve(result);
+        })
+            .catch(function (err) {
+            return Promise.reject(err);
+        });
+    };
     return AsanaClient;
 }());
+exports.AsanaClient = AsanaClient;
 function create(credentials) {
     return new AsanaClient(credentials);
 }

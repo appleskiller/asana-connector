@@ -12,9 +12,10 @@ $(document).ready(function () {
                 $.ajax({
                     url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
                     type: "POST",
+                    timeout: 0,
                     contentType: "application/json",
                     data: JSON.stringify({
-                        name: "proj" ,
+                        datatableId: "" ,
                         projectId: id
                     })
                 }).then(function(result) {
@@ -52,39 +53,44 @@ $(document).ready(function () {
 
         // $.ajax({
         //     url: 'https://localhost:18081/asana/resource/workspaces',
-        //     type: "GET"
+        //     type: "GET",
+        //     timeout: 0,
         // }).then(function(result) {
         //     renderList("workspaces",result);
         // });
         // $.ajax({
         //     url: 'https://localhost:18081/asana/resource/teams',
-        //     type: "GET"
+        //     type: "GET",
+        //     timeout: 0,
         // }).then(function(result) {
         //     renderList("teams",result);
         // });
-        // $.ajax({
-        //     url: 'https://localhost:18081/asana/resource/projects',
-        //     type: "GET"
-        // }).then(function(result) {
-        //     renderList("projects",result);
-        // });
+        $.ajax({
+            url: 'https://localhost:18081/asana/resource/projects',
+            type: "GET",
+            timeout: 0
+        }).then(function(result) {
+            renderList("projects",result);
+        });
 
         // $.ajax({
         //     url: "https://localhost:18081/asana/resource/projects",
         //     type: "POST",
+        //     timeout: 0,
         //     contentType: "application/json",
         //     data: JSON.stringify({
         //         ids: [275995325944865]
         //     })
         // })
-        $.ajax({
-            url: "https://localhost:18081/asana/resource/tasks",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                ids: [285199443646363]
-            })
-        })
+        // $.ajax({
+        //     url: "https://localhost:18081/asana/resource/tasks",
+        //     type: "POST",
+        //     timeout: 0,
+        //     contentType: "application/json",
+        //     data: JSON.stringify({
+        //         ids: [240126117951142]
+        //     })
+        // })
     }
     function renderMonitoring(progressTasks , noTaskMsg) {
         var tasks = [];
