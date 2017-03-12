@@ -3,16 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var Asana = require("asana");
 var Promise = require("bluebird");
 var progress = require("./progress");
+var Logger = require("./logger");
+var log = Logger.getLogger("asanaclient");
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
 var clientSecret = config.asana.clientSecret;
 var redirectUri = config.asana.redirectUri;
 var port = process.env['PORT'] || 18081;
-var LIMIT = 100;
 function fetchList(dispatcher, params, finalResult) {
     finalResult = finalResult || { list: [] };
     params = params || {};
-    params.limit = params.limit || LIMIT;
     return new Promise(function (resolve, reject) {
         dispatcher.findAll(params).then(function (result) {
             finalResult.list = finalResult.list.concat(result.data || []);
@@ -35,7 +35,6 @@ function fetchList(dispatcher, params, finalResult) {
 function fetchListById(dispatcher, method, id, params, finalResult) {
     finalResult = finalResult || { list: [] };
     params = params || {};
-    params.limit = params.limit || LIMIT;
     return new Promise(function (resolve, reject) {
         dispatcher[method](id, params).then(function (result) {
             finalResult.list = finalResult.list.concat(result.data || []);
@@ -90,7 +89,7 @@ var AsanaClient = (function () {
                         token.current = workspaces[index].name;
                         metas = metas.concat(results);
                     }).catch(function ignore(err) {
-                        console.log("metadatas - ignore error: ", err);
+                        log.log("metadatas - ignore error: ", err);
                         token.loaded++;
                         token.error++;
                     });
@@ -108,20 +107,29 @@ var AsanaClient = (function () {
     };
     AsanaClient.prototype.entities = function (resType, ids) {
         var client = this._nativeClient;
-        return new Promise(function (resolve, reject) {
-            if (!client[resType]) {
-                return reject(new Error("resType invalid : " + resType));
-            }
-            else {
-                var promises = [];
-                for (var i = 0; i < ids.length; i++) {
-                    promises.push(client[resType].findById(ids[i]));
-                }
-                Promise.all(promises).then(function (entities) {
-                    resolve(entities);
-                }, reject);
-            }
-        });
+        if (!client[resType]) {
+            return Promise.reject(new Error("resType invalid : " + resType));
+        }
+        else {
+            var token = progress.create(ids.length, {
+                method: 'asanaclient.entities',
+                type: resType,
+                name: 'asanaclient.entities.' + resType
+            });
+            return Promise.map(ids, function (id, index, length) {
+                return client[resType].findById(id).then(function (result) {
+                    token.loaded++;
+                    token.current = result.name;
+                    return Promise.resolve(result);
+                }).catch(function ignore(err) {
+                    token.loaded++;
+                    token.error++;
+                    log.log("asanaclient.entities error:", err);
+                });
+            }, {
+                concurrency: 1,
+            });
+        }
     };
     AsanaClient.prototype.progressEntities = function (resType, ids, processor) {
         var dispatcher = this._nativeClient[resType];
@@ -137,12 +145,12 @@ var AsanaClient = (function () {
                     token.current = res.name;
                     return processor(res);
                 }).catch(function ignore(err) {
-                    console.log("progressEntities - ignore error:", err);
+                    log.log("progressEntities - ignore error:", err);
                     token.loaded++;
                     token.error++;
                 });
             }, {
-                concurrency: 10
+                concurrency: 1
             }).then(function (results) {
                 progress.end(token.id);
                 resolve(results);
@@ -168,69 +176,51 @@ var AsanaClient = (function () {
             }, reject);
         });
     };
-    AsanaClient.prototype.tasksInProject = function (projectId) {
+    AsanaClient.prototype.tasksInProject = function (projectId, subtaskParams) {
         var client = this._nativeClient;
-        return new Promise(function (resolve, reject) {
-            var token = progress.create(1, {
-                method: "asanaclient.tasksInProject",
-                type: "tasks",
-                name: "fetch project: " + projectId
-            });
-            client.projects.findById(projectId).then(function (project) {
-                fetchListById(client.projects, "tasks", projectId).then(function (tasks) {
-                    token.info.id = project.id;
-                    token.info.name = "fetch project tasks: " + project.name;
-                    token.total = tasks.length;
-                    project.tasks = tasks;
-                    Promise.map(tasks, function (task, index, length) {
-                        return fetchListById(client.tasks, "subtasks", task.id).then(function (subtasks) {
-                            task.subtasks = subtasks;
-                            token.loaded++;
-                            token.current = task.name;
-                        }).catch(function ignore(err) {
-                            console.log("tasksInProject - fetch all subtasks error:", err);
+        var token = progress.create(1, {
+            method: "asanaclient.tasksInProject",
+            type: "tasks",
+            name: "fetch project: " + projectId
+        });
+        return client.projects.findById(projectId).then(function (project) {
+            return fetchListById(client.projects, "tasks", projectId).then(function (tasks) {
+                token.info.id = project.id;
+                token.info.name = "fetch project tasks: " + project.name;
+                token.total = tasks.length;
+                project.tasks = [];
+                return Promise.map(tasks, function (task, index, length) {
+                    return client.tasks.findById(task.id).catch(function (err) {
+                        log.log("tasksInProject - retry fetch task [" + task.id + "]");
+                        return client.tasks.findById(task.id).catch(function (err) {
+                            log.log("tasksInProject - fetch task [" + task.id + "] " + task.name + " error:", err);
                             token.loaded++;
                             token.error++;
                         });
-                    }, {
-                        concurrency: 10
-                    }).then(function () {
-                        progress.end(token.id);
-                        resolve(project);
-                    }).catch(function (err) {
-                        progress.end(token.id);
-                        return Promise.reject(err);
+                    }).then(function (task) {
+                        project.tasks.push(task);
+                        return fetchListById(client.tasks, "subtasks", task.id, subtaskParams).catch(function (err) {
+                            log.log("tasksInProject - retry fetch subtasks with [" + task.id + "]");
+                            return fetchListById(client.tasks, "subtasks", task.id, subtaskParams).catch(function (err) {
+                                log.log("tasksInProject - fetch subtasks with [" + task.id + "] " + task.name + " error:", err);
+                                return Promise.resolve([]);
+                            });
+                        }).then(function (subtasks) {
+                            task.subtasks = subtasks;
+                            token.loaded++;
+                            token.current = task.name;
+                        });
                     });
-                }).catch(function (err) {
-                    reject(err);
+                }, {
+                    concurrency: 1
+                }).then(function () {
+                    progress.end(token.id);
+                    return Promise.resolve(project);
                 });
-            }).catch(function (err) {
-                reject(err);
             });
-        });
-    };
-    AsanaClient.prototype.taskEntities = function (task) {
-        var client = this._nativeClient;
-        var self = this;
-        var subs = task.subtasks ? task.subtasks : [];
-        var ids = [];
-        for (var i = 0; i < subs.length; i++) {
-            subs[i] && ids.push(subs[i].id);
-        }
-        return client.tasks.findById(task.id)
-            .then(function (result) {
-            return Promise.resolve(result);
-        })
-            .then(function (result) {
-            return self.entities("tasks", ids).then(function (subtasks) {
-                result.subtasks = subtasks;
-                return Promise.resolve(result);
-            });
-        })
-            .then(function (result) {
-            return Promise.resolve(result);
-        })
-            .catch(function (err) {
+        }).catch(function (err) {
+            log.log("tasksInProject error:", err);
+            progress.end(token.id);
             return Promise.reject(err);
         });
     };

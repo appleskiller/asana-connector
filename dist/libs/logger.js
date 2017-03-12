@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var fs = require("fs");
 var Logger = (function () {
     function Logger(name) {
         this._name = name;
@@ -9,7 +10,9 @@ var Logger = (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             msgs[_i] = arguments[_i];
         }
-        console.log("[" + (new Date()).toLocaleString() + "] [" + this._name + "] : " + msgs.join(" "));
+        var msg = "[" + (new Date()).toLocaleString() + "] [" + this._name + "] : " + msgs.join(" ");
+        console.log(msg);
+        fs.appendFileSync("./out.log", msg + "\r\n", "utf8");
     };
     return Logger;
 }());

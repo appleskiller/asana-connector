@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var Promise = require("bluebird");
 var request = require("request");
 var _ = require("lodash");
+var Logger = require("./logger");
+var log = Logger.getLogger("shujuguanclient");
 var config = require("../../config/server.json");
 var token = config.shujuguan.token;
 var enterprise = config.shujuguan.enterprise;
@@ -19,7 +21,7 @@ function doRequest(params) {
                 var result = (typeof payload === "string") ? JSON.parse(payload) : payload;
             }
             catch (err) {
-                console.log("parse json error!", payload);
+                log.log("parse json error!", payload);
                 return reject(new Error("parse json error!"));
             }
             if (result.error) {
@@ -34,20 +36,8 @@ function doRequest(params) {
 var _propMap = {
     "columnType": "type",
 };
-function _getColumnPropForCreate(key) {
-    return _propMap[key] ? _propMap[key] : key;
-}
-function convertColumnToCreat(columns) {
-    var results = [], obj;
-    _.each(columns, function (column) {
-        obj = {};
-        for (var key in column) {
-            obj[_getColumnPropForCreate(key)] = column[key];
-        }
-        results.push(obj);
-    });
-    return results;
-}
+var DATATABLEAPI_VERSION = 1.0;
+var DATATABLEAPI_LANGUAGE = "node";
 var DataTableAPI = (function () {
     function DataTableAPI() {
     }
@@ -71,10 +61,51 @@ var DataTableAPI = (function () {
             }
         });
     };
+    DataTableAPI.prototype._getColumnPropForCreate = function (key) {
+        return _propMap[key] ? _propMap[key] : key;
+    };
+    DataTableAPI.prototype._attachDataConfigAttrs = function (data) {
+        var attrs = (data && data.dataConfig && data.dataConfig.attrs) ? data.dataConfig.attrs : {};
+        var result = {};
+        for (var key in attrs) {
+            result[key] = attrs[key];
+            result["_api_version_"] = DATATABLEAPI_VERSION;
+            result["_api_language_"] = DATATABLEAPI_LANGUAGE;
+        }
+        return result;
+    };
+    DataTableAPI.prototype._convertTableToUpdate = function (datatable, rowdata) {
+        var result = {};
+        for (var key in datatable) {
+            result[key] = datatable[key];
+        }
+        result.rows = [];
+        var row;
+        for (var i = 0; i < rowdata.length; i++) {
+            var element = rowdata[i];
+            row = { cells: [] };
+            for (var j = 0; j < element.length; j++) {
+                row.cells.push({ value: element[j] });
+            }
+            result.rows.push(row);
+        }
+        return result;
+    };
+    DataTableAPI.prototype._convertColumnToCreat = function (columns) {
+        var results = [], obj, self = this;
+        _.each(columns, function (column) {
+            obj = {};
+            for (var key in column) {
+                obj[self._getColumnPropForCreate(key)] = column[key];
+            }
+            results.push(obj);
+        });
+        return results;
+    };
     DataTableAPI.prototype.create = function (data) {
         var self = this;
         return doRequest({
-            url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/createdatatable",
+            url: "https://" + enterprise + ".shujuguan.cn/openapi/data/create",
             method: "POST",
             headers: {
                 "Authorization": "OAuth " + token,
@@ -82,16 +113,19 @@ var DataTableAPI = (function () {
             },
             json: true,
             body: {
-                "batchDataColumns": convertColumnToCreat(data.columns),
-                "dataName": data.name
+                attrs: this._attachDataConfigAttrs(data),
+                "dataConnectorTable": {
+                    "columns": this._convertColumnToCreat(data.columns),
+                    "name": data.name
+                },
             }
         });
     };
-    DataTableAPI.prototype.update = function (dtid, columns, append) {
+    DataTableAPI.prototype.update = function (data, rowdata, append) {
         if (append === void 0) { append = false; }
         var self = this;
         return doRequest({
-            url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/" + dtid + "/updatedatatable",
+            url: "https://" + enterprise + ".shujuguan.cn/openapi/data/update?dataId=" + data.id,
             method: "POST",
             headers: {
                 "Authorization": "OAuth " + token,
@@ -100,31 +134,8 @@ var DataTableAPI = (function () {
             json: true,
             body: {
                 append: append,
-                batchDataColumns: columns
-            }
-        });
-    };
-    DataTableAPI.prototype.append = function (dtid, data) {
-        var self = this;
-        return doRequest({
-            url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/" + dtid + "/appenddatas",
-            method: "POST",
-            headers: {
-                "Authorization": "OAuth " + token,
-                "Content-Type": "application/json; charset=utf-8"
-            },
-            json: true,
-            body: data
-        });
-    };
-    DataTableAPI.prototype.commit = function (dtid) {
-        var self = this;
-        return doRequest({
-            url: "https://" + enterprise + ".shujuguan.cn/openapi/dtbatch/" + dtid + "/commit",
-            method: "GET",
-            headers: {
-                "Authorization": "OAuth " + token,
-                "Content-Type": "application/json; charset=utf-8"
+                attrs: this._attachDataConfigAttrs(data),
+                "dataConnectorTable": this._convertTableToUpdate(data, rowdata)
             }
         });
     };

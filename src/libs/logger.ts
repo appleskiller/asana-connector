@@ -1,10 +1,14 @@
+import * as fs from "fs";
+
 class Logger {
     private _name: string;
     constructor(name: string) {
         this._name = name;
     }
     log(...msgs): void {
-        console.log(`[${(new Date()).toLocaleString()}] [${this._name}] : ${msgs.join(" ")}`);
+        var msg = `[${(new Date()).toLocaleString()}] [${this._name}] : ${msgs.join(" ")}`;
+        console.log(msg);
+        fs.appendFileSync("./out.log" , msg+"\r\n" , "utf8");
     }
 }
 var loggers: {[name:string]: Logger} = {};

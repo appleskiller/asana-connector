@@ -114,12 +114,8 @@ router.post("/upload/shujuguan/projects", function (req, res) {
         if (asanauser) {
             var asana = asanaclient.create(asanauser.token);
             var shujuguan = shujuguanclient.create();
-            log.log("fetch tasksInProject ...");
-            asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, projectId, datatableId).then(function (datatable) {
-                res.send(datatable);
-            }).catch(function (err) {
-                res.status(500).send(err);
-            });
+            var taskid = asana2shujuguan.uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, datatableId);
+            res.send(taskid);
         }
         else {
             res.status(401);
@@ -127,6 +123,7 @@ router.post("/upload/shujuguan/projects", function (req, res) {
     }
 });
 router.get("/monitoring", function (req, res) {
+    res.charset = 'utf-8';
     res.send(progress.all());
 });
 module.exports = router;
