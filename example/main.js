@@ -6,9 +6,10 @@ $(document).ready(function () {
     
     var asanaUser = null;
 
-    function _onClickedHandle(type , id) {
+    function _onProjectClickedHandle(item) {
         return function () {
-            if (type === "projects") {
+            var ret = window.confirm("抽取数据 [ "+item.name+" ] 到数据观");
+            if (ret) {
                 $.ajax({
                     url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
                     type: "POST",
@@ -24,21 +25,25 @@ $(document).ready(function () {
             }
         }
     }
-
+    function renderListItem(type , item) {
+        var li = $('<li data-id="'+item.id+'">'+item.name+'</li>');
+        if (type === "projects") {
+            li.html("<a href='javascript:void(0);'>upload</a>" + "<span>"+item.name+"</span>")
+            li.find("a").click(_onProjectClickedHandle(item));
+        }
+        return li;
+    }
     function renderList(type , value) {
         var list = resourcePage.find("." + type + " .content");
-        list.find("li").off();
         list.empty();
-        var ul = $('<ul></ul>') , li;
+        var ul = $('<ul></ul>');
         value = value || [];
         for (var i = 0; i < value.length; i++) {
-            var item = value[i];
-            li = $('<li data-id="'+item.id+'">'+item.name+'</li>');
-            li.click(_onClickedHandle(type , item.id));
-            ul.append(li);
+            ul.append(renderListItem(type , value[i]));
         }
         list.append(ul);
     }
+    
     function renderResourcePage() {
         var userInfo = resourcePage.find(".user-info");
         userInfo.find(".image").css("background-image" , "url("+asanaUser.photo.image_60x60+")");

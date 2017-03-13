@@ -194,8 +194,7 @@ var AsanaClient = (function () {
                         log.log("tasksInProject - retry fetch task [" + task.id + "]");
                         return client.tasks.findById(task.id).catch(function (err) {
                             log.log("tasksInProject - fetch task [" + task.id + "] " + task.name + " error:", err);
-                            token.loaded++;
-                            token.error++;
+                            return Promise.reject(err);
                         });
                     }).then(function (task) {
                         project.tasks.push(task);
@@ -203,7 +202,7 @@ var AsanaClient = (function () {
                             log.log("tasksInProject - retry fetch subtasks with [" + task.id + "]");
                             return fetchListById(client.tasks, "subtasks", task.id, subtaskParams).catch(function (err) {
                                 log.log("tasksInProject - fetch subtasks with [" + task.id + "] " + task.name + " error:", err);
-                                return Promise.resolve([]);
+                                return Promise.reject(err);
                             });
                         }).then(function (subtasks) {
                             task.subtasks = subtasks;

@@ -14,8 +14,10 @@ type HeaderProp = {
 	valueConverter: (value: any) => any;
 }
 type PrivateTaskAttrs = {
+    "from": string;
     "tableType": string;
     "projectId": string;
+    "lastupdate": string;
 }
 function any2any(v:any):any {
 	return v;
@@ -62,7 +64,8 @@ function ISO2datestring(str: string): string {
     return null;
 }
 function fillnow(): string {
-    var isoStr = (new Date()).toISOString();
+    // 换算中国标准时间
+    var isoStr = new Date(+new Date()+8*3600*1000).toISOString();
     return isoStr.split("T")[0];
 }
 function fillnull(): any {
@@ -195,8 +198,10 @@ function getTaskTableName(project: asanaclient.Projects , type: string = "uptoda
 // type = uptodate || daytoday
 function getTaskTablePrivateAttrs(project: asanaclient.Projects , type: string = "uptodate"): PrivateTaskAttrs {
     return {
+        "from": "asana",
         "tableType": type,
-        "projectId": ""+project.id
+        "projectId": ""+project.id,
+        "lastupdate": ""+(new Date()).getTime()
     }
 }
 function createTaskTableColumns(project: asanaclient.Projects): shujuguanclient.Column[] {
@@ -257,10 +262,20 @@ function createTaskTableByProject(project: asanaclient.Projects , type: string =
         columns: createTaskTableColumns(project),
         name: `Asana Tasks in ${name}`,
         dataConfig: {
-            attrs: getTaskTablePrivateAttrs(project , type)
+            attrs: {}
         }
     }
     return dt;
+}
+function isReachDayToDayCycle(datatable: shujuguanclient.DataTable): boolean {
+    if (!datatable || !datatable.dataConfig || !datatable.dataConfig.attrs || !datatable.dataConfig.attrs.lastupdate) {
+        return true;
+    } else {
+        var d1 = new Date();
+        d1.setTime(parseInt(datatable.dataConfig.attrs.lastupdate));
+        var d2 = new Date();
+        return ((d2.getFullYear() > d1.getFullYear()) || (d2.getMonth() > d1.getMonth()) || (d2.getDate() > d1.getDate()));
+    }
 }
 function isTableByType(dt: shujuguanclient.DataTable , project: asanaclient.Projects , type: string): boolean {
     return dt && dt.dataConfig && dt.dataConfig.attrs && (dt.dataConfig.attrs.projectId === ""+project.id && dt.dataConfig.attrs.tableType === type);
@@ -310,6 +325,8 @@ export function uploadTasksTableWithProjectAsync(asana: asanaclient.AsanaClient 
                             return Promise.resolve(dt);
                         }
                     }).then(function (datatable: shujuguanclient.DataTable) {
+                        log.log(`update uptodate table to shujuguan`)
+                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "uptodate");
                         return shujuguan.datatables.update(datatable , rowdatas , false);
                     }),
                     // 追加daytoday数据
@@ -323,7 +340,15 @@ export function uploadTasksTableWithProjectAsync(asana: asanaclient.AsanaClient 
                             return Promise.resolve(dt);
                         }
                     }).then(function (datatable: shujuguanclient.DataTable) {
-                        return shujuguan.datatables.update(datatable , rowdatas , true);
+                        // 判断是否能够追加
+                        if (isReachDayToDayCycle(datatable)) {
+                            log.log(`update daytoday table to shujuguan`)
+                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "daytoday");
+                            return shujuguan.datatables.update(datatable , rowdatas , true);
+                        } else {
+                            log.log("Not to update cycle");
+                            return Promise.resolve(datatable);
+                        }
                     })
                 ])
             });

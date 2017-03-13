@@ -49,7 +49,7 @@ function ISO2datestring(str) {
     return null;
 }
 function fillnow() {
-    var isoStr = (new Date()).toISOString();
+    var isoStr = new Date(+new Date() + 8 * 3600 * 1000).toISOString();
     return isoStr.split("T")[0];
 }
 function fillnull() {
@@ -180,8 +180,10 @@ function getTaskTableName(project, type) {
 function getTaskTablePrivateAttrs(project, type) {
     if (type === void 0) { type = "uptodate"; }
     return {
+        "from": "asana",
         "tableType": type,
-        "projectId": "" + project.id
+        "projectId": "" + project.id,
+        "lastupdate": "" + (new Date()).getTime()
     };
 }
 function createTaskTableColumns(project) {
@@ -237,10 +239,21 @@ function createTaskTableByProject(project, type) {
         columns: createTaskTableColumns(project),
         name: "Asana Tasks in " + name,
         dataConfig: {
-            attrs: getTaskTablePrivateAttrs(project, type)
+            attrs: {}
         }
     };
     return dt;
+}
+function isReachDayToDayCycle(datatable) {
+    if (!datatable || !datatable.dataConfig || !datatable.dataConfig.attrs || !datatable.dataConfig.attrs.lastupdate) {
+        return true;
+    }
+    else {
+        var d1 = new Date();
+        d1.setTime(parseInt(datatable.dataConfig.attrs.lastupdate));
+        var d2 = new Date();
+        return ((d2.getFullYear() > d1.getFullYear()) || (d2.getMonth() > d1.getMonth()) || (d2.getDate() > d1.getDate()));
+    }
 }
 function isTableByType(dt, project, type) {
     return dt && dt.dataConfig && dt.dataConfig.attrs && (dt.dataConfig.attrs.projectId === "" + project.id && dt.dataConfig.attrs.tableType === type);
@@ -289,6 +302,8 @@ function uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, dtid) {
                             return Promise.resolve(dt);
                         }
                     }).then(function (datatable) {
+                        log.log("update uptodate table to shujuguan");
+                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "uptodate");
                         return shujuguan.datatables.update(datatable, rowdatas, false);
                     }),
                     Promise.resolve(daytodayTable).then(function (dt) {
@@ -302,7 +317,15 @@ function uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, dtid) {
                             return Promise.resolve(dt);
                         }
                     }).then(function (datatable) {
-                        return shujuguan.datatables.update(datatable, rowdatas, true);
+                        if (isReachDayToDayCycle(datatable)) {
+                            log.log("update daytoday table to shujuguan");
+                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "daytoday");
+                            return shujuguan.datatables.update(datatable, rowdatas, true);
+                        }
+                        else {
+                            log.log("Not to update cycle");
+                            return Promise.resolve(datatable);
+                        }
                     })
                 ]);
             });

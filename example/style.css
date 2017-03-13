@@ -116,9 +116,22 @@ h4 {
     left: 0;
     right: 0;
 }
+.resource-page .projects ul li a {
+    margin-right: 8px;
+    text-decoration: blink;
+    border: solid 1px #CCC;
+    border-radius: 3px;
+    padding: 2px 8px;
+    background-color: #FFFFFF;
+    color: #000;
+}
+.resource-page .projects ul li a:hover {
+    background-color: #198EDB;
+    color: #FFF;
+    border-color: #2974A5;
+}
 .resource-page .projects ul li{
     padding: 4px 0;
-    cursor: pointer;
 }
 .resource-page .projects ul li:hover{
     background-color: #E5E5E5;
