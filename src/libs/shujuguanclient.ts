@@ -48,7 +48,7 @@ export type DataTable = {
     id?: string;
     // attrs?: {[key: string]: any};
     dataConfig?:{
-        attrs: {[key: string]: any}
+        attrs: any
     }
 }
 

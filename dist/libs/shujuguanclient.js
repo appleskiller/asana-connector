@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 var Promise = require("bluebird");
 var request = require("request");
 var _ = require("lodash");

@@ -280,8 +280,7 @@ function isReachDayToDayCycle(datatable: shujuguanclient.DataTable): boolean {
 function isTableByType(dt: shujuguanclient.DataTable , project: asanaclient.Projects , type: string): boolean {
     return dt && dt.dataConfig && dt.dataConfig.attrs && (dt.dataConfig.attrs.projectId === ""+project.id && dt.dataConfig.attrs.tableType === type);
 }
-export function uploadTasksTableWithProjectAsync(asana: asanaclient.AsanaClient , shujuguan: shujuguanclient.ShujuguanClient , projectId: number , dtid?: string): string {
-    dtid = dtid || "__invalid table id__";
+export function uploadTasksTableWithProject(asana: asanaclient.AsanaClient , shujuguan: shujuguanclient.ShujuguanClient , projectId: number , promiseful:boolean = false): any {
     log.log(`uploadTasksTableWithProjectAsync[${projectId}] start ...`);
     var progressMessage: string = `upload tasks to shujuguan (1/3) : fetch tasks by project[${projectId}] from asana`;
 	var token = progress.create(3, {
@@ -290,7 +289,7 @@ export function uploadTasksTableWithProjectAsync(asana: asanaclient.AsanaClient 
         name: progressMessage
     });
     log.log(progressMessage);
-    asana.tasksInProject(projectId , {opt_fields: "completed"}).then(function (project: asanaclient.Projects) {
+    var promise = asana.tasksInProject(projectId , {opt_fields: "completed"}).then(function (project: asanaclient.Projects) {
         var columns = createTaskTableColumns(project);
         var rowdatas = [];
         return Promise.each(project.tasks , function (task: asanaclient.Tasks , index: number , length: number) {
@@ -362,5 +361,9 @@ export function uploadTasksTableWithProjectAsync(asana: asanaclient.AsanaClient 
         progress.end(token.id);
         return Promise.reject(err);
     })
-    return token.id;
+    if (promiseful) {
+        return promise;
+    } else {
+        return token.id;
+    }
 }

@@ -8,11 +8,14 @@ import * as session from "express-session";
 
 import * as oathRouter from "./routers/oauth";
 import * as resourceRouter from "./routers/resource";
+import * as SBIschedule from "./libs/SBIschedule";
+import * as Logger from "./libs/logger";
+
+var log = Logger.getLogger("system");
 
 var config = require("../config/server.json");
 
 var app = express();
-
 // 允许跨域
 // app.use(function(req, res, next) {
 //     res.header('Access-Control-Allow-Origin', '*');
@@ -56,8 +59,11 @@ app.get('/', function (req: express.Request, res: express.Response) {
 var PORT = config.env.PORT;
 var SSLPORT = config.env.SSLPORT;
 httpServer.listen(PORT, function () {
-    console.log('HTTP Server is running on: http://localhost:%s', PORT);
+    log.log(`HTTP Server is running on: http://localhost:${PORT}`);
 });
 httpsServer.listen(SSLPORT, function () {
-    console.log('HTTPS Server is running on: https://localhost:%s', SSLPORT);
+    log.log(`HTTPS Server is running on: https://localhost:${SSLPORT}`);
+    // 启动立即执行
+    // SBIschedule.start();
+    
 });

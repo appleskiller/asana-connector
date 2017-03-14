@@ -104,7 +104,6 @@ router.get("/progress", function (req, res) {
     res.send(progress.all());
 });
 router.post("/upload/shujuguan/projects", function (req, res) {
-    var datatableId = req.body.datatableId;
     var projectId = req.body.projectId;
     if (!projectId) {
         res.status(500).send("invalid post body!");
@@ -114,7 +113,7 @@ router.post("/upload/shujuguan/projects", function (req, res) {
         if (asanauser) {
             var asana = asanaclient.create(asanauser.token);
             var shujuguan = shujuguanclient.create();
-            var taskid = asana2shujuguan.uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, datatableId);
+            var taskid = asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, projectId);
             res.send(taskid);
         }
         else {

@@ -230,24 +230,28 @@ export class AsanaClient {
                 project.tasks = [];
                 // fetch all subtasks
                 return Promise.map(tasks, function (task: Tasks, index: number, length: number) {
-                    return client.tasks.findById(task.id).catch(function (err) {
-                        log.log(`tasksInProject - retry fetch task [${task.id}]`);
+                    log.log(`tasksInProject[${token.loaded}/${token.total}] - fetch task [${task.name}]`);
+                    return Promise.delay(1000).then(function () {
                         return client.tasks.findById(task.id).catch(function (err) {
-                            log.log(`tasksInProject - fetch task [${task.id}] ${task.name} error:` , err);
-                            return Promise.reject(err);
-                        });
-                    }).then(function (task: Tasks){
-                        project.tasks.push(task);
-                        return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
-                            log.log(`tasksInProject - retry fetch subtasks with [${task.id}]`);
-                            return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
-                                log.log(`tasksInProject - fetch subtasks with [${task.id}] ${task.name} error:` , err);
+                            log.log(`tasksInProject - retry fetch task [${task.id}]`);
+                            return client.tasks.findById(task.id).catch(function (err) {
+                                log.log(`tasksInProject - fetch task [${task.id}] ${task.name} error:` , err);
                                 return Promise.reject(err);
+                            });
+                        }).then(function (task: Tasks){
+                            project.tasks.push(task);
+                            log.log(`tasksInProject[${token.loaded}/${token.total}] - fetch subtask of [${task.name}]`);
+                            return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
+                                log.log(`tasksInProject - retry fetch subtasks with [${task.id}]`);
+                                return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
+                                    log.log(`tasksInProject - fetch subtasks with [${task.id}] ${task.name} error:` , err);
+                                    return Promise.reject(err);
+                                })
+                            }).then(function (subtasks: Tasks[]) {
+                                task.subtasks = subtasks;
+                                token.loaded++;
+                                token.current = task.name;
                             })
-                        }).then(function (subtasks: Tasks[]) {
-                            task.subtasks = subtasks;
-                            token.loaded++;
-                            token.current = task.name;
                         })
                     })
                 }, {

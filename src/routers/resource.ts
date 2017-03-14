@@ -60,7 +60,6 @@ function entities (resType: string) {
         }
     }
 }
-
 router.get("/workspaces" , function(req , res: express.Response) {
     var asanauser = storage.get("asanauser");
     if (asanauser) {
@@ -107,7 +106,6 @@ router.get("/progress" , function (req , res) {
 })
 
 router.post("/upload/shujuguan/projects" , function (req , res) {
-    var datatableId = req.body.datatableId;
     var projectId = req.body.projectId;
     if (!projectId) {
         res.status(500).send("invalid post body!");
@@ -116,7 +114,7 @@ router.post("/upload/shujuguan/projects" , function (req , res) {
         if (asanauser) {
             var asana = asanaclient.create(asanauser.token);
             var shujuguan = shujuguanclient.create();
-            var taskid = asana2shujuguan.uploadTasksTableWithProjectAsync(asana , shujuguan , projectId , datatableId);
+            var taskid = asana2shujuguan.uploadTasksTableWithProject(asana , shujuguan , projectId);
             res.send(taskid);
         } else {
             res.status(401);

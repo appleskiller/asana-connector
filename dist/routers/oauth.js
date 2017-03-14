@@ -44,6 +44,7 @@ router.get('/oauth_callback', function (req, res) {
         log.log("asana callback with code");
         client.app.accessTokenFromCode(code).then(function (credentials) {
             log.log("asana connected.");
+            console.log(credentials);
             client.useOauth({ credentials: credentials.access_token });
             client.users.me().then(function (me) {
                 storage.set("asanauser", {

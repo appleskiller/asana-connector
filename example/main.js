@@ -17,7 +17,7 @@ $(document).ready(function () {
                     contentType: "application/json",
                     data: JSON.stringify({
                         datatableId: "" ,
-                        projectId: id
+                        projectId: item.id
                     })
                 }).then(function(result) {
                     console.log(result);
@@ -70,13 +70,25 @@ $(document).ready(function () {
         // }).then(function(result) {
         //     renderList("teams",result);
         // });
-        $.ajax({
-            url: 'https://localhost:18081/asana/resource/projects',
-            type: "GET",
-            timeout: 0
-        }).then(function(result) {
-            renderList("projects",result);
-        });
+        // $.ajax({
+        //     url: 'https://localhost:18081/asana/resource/projects',
+        //     type: "GET",
+        //     timeout: 0
+        // }).then(function(result) {
+        //     renderList("projects",result);
+        // });
+
+        // $.ajax({
+        //     url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
+        //     type: "POST",
+        //     timeout: 0,
+        //     contentType: "application/json",
+        //     data: JSON.stringify({
+        //         projectId: 275995325944865
+        //     })
+        // }).then(function(result) {
+        //     console.log(result);
+        // });
 
         // $.ajax({
         //     url: "https://localhost:18081/asana/resource/projects",
@@ -187,5 +199,5 @@ $(document).ready(function () {
         })
     }
     detectUser();
-    monitoring();
+    // monitoring();
 })

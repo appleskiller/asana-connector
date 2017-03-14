@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 var Promise = require("bluebird");
 var Logger = require("../libs/logger");
 var progress = require("./progress");
@@ -258,8 +257,8 @@ function isReachDayToDayCycle(datatable) {
 function isTableByType(dt, project, type) {
     return dt && dt.dataConfig && dt.dataConfig.attrs && (dt.dataConfig.attrs.projectId === "" + project.id && dt.dataConfig.attrs.tableType === type);
 }
-function uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, dtid) {
-    dtid = dtid || "__invalid table id__";
+function uploadTasksTableWithProject(asana, shujuguan, projectId, promiseful) {
+    if (promiseful === void 0) { promiseful = false; }
     log.log("uploadTasksTableWithProjectAsync[" + projectId + "] start ...");
     var progressMessage = "upload tasks to shujuguan (1/3) : fetch tasks by project[" + projectId + "] from asana";
     var token = progress.create(3, {
@@ -268,7 +267,7 @@ function uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, dtid) {
         name: progressMessage
     });
     log.log(progressMessage);
-    asana.tasksInProject(projectId, { opt_fields: "completed" }).then(function (project) {
+    var promise = asana.tasksInProject(projectId, { opt_fields: "completed" }).then(function (project) {
         var columns = createTaskTableColumns(project);
         var rowdatas = [];
         return Promise.each(project.tasks, function (task, index, length) {
@@ -339,7 +338,12 @@ function uploadTasksTableWithProjectAsync(asana, shujuguan, projectId, dtid) {
         progress.end(token.id);
         return Promise.reject(err);
     });
-    return token.id;
+    if (promiseful) {
+        return promise;
+    }
+    else {
+        return token.id;
+    }
 }
-exports.uploadTasksTableWithProjectAsync = uploadTasksTableWithProjectAsync;
+exports.uploadTasksTableWithProject = uploadTasksTableWithProject;
 //# sourceMappingURL=asana2shujuguan.js.map

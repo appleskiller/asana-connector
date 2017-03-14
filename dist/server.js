@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 var express = require("express");
 var fs = require("fs");
 var http = require("http");
@@ -9,6 +8,8 @@ var bodyParser = require("body-parser");
 var session = require("express-session");
 var oathRouter = require("./routers/oauth");
 var resourceRouter = require("./routers/resource");
+var Logger = require("./libs/logger");
+var log = Logger.getLogger("system");
 var config = require("../config/server.json");
 var app = express();
 app.use(express.static('example'));
@@ -42,9 +43,9 @@ app.get('/', function (req, res) {
 var PORT = config.env.PORT;
 var SSLPORT = config.env.SSLPORT;
 httpServer.listen(PORT, function () {
-    console.log('HTTP Server is running on: http://localhost:%s', PORT);
+    log.log("HTTP Server is running on: http://localhost:" + PORT);
 });
 httpsServer.listen(SSLPORT, function () {
-    console.log('HTTPS Server is running on: https://localhost:%s', SSLPORT);
+    log.log("HTTPS Server is running on: https://localhost:" + SSLPORT);
 });
 //# sourceMappingURL=server.js.map
