@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Asana = require("asana");
 var Promise = require("bluebird");
 var progress = require("./progress");
@@ -65,6 +66,9 @@ var AsanaClient = (function () {
     }
     AsanaClient.prototype.nativeClient = function () {
         return this._nativeClient;
+    };
+    AsanaClient.prototype.me = function () {
+        return this._nativeClient.users.me();
     };
     AsanaClient.prototype.workspaces = function () {
         return fetchList(this._nativeClient.workspaces);

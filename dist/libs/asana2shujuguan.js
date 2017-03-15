@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Promise = require("bluebird");
 var Logger = require("../libs/logger");
 var progress = require("./progress");

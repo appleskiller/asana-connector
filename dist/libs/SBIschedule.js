@@ -1,9 +1,12 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var fs = require("fs");
 var Logger = require("./logger");
 var asanaclient = require("./asanaclient");
 var shujuguanclient = require("./shujuguanclient");
 var asana2shujuguan = require("./asana2shujuguan");
+var cache = require("./cache");
+var storage = cache.createInstance("asana");
 var log = Logger.getLogger("scheduleSBI");
 var config = require("../../config/server.json");
 var clientId = config.asana.clientId;
@@ -26,14 +29,23 @@ function start() {
         setTimeout(start, 60000);
     }
     else {
-        var asana = asanaclient.create(config.asana.access_token);
+        var asana = asanaclient.create(config.asana.credentials);
         var shujuguan = shujuguanclient.create();
-        asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, schedule.projectId, true).then(function () {
-            log.log("SBI schedule task completed. check update " + schedule.checkPeriod + "ms later");
-            setTimeout(start, schedule.checkPeriod);
+        asana.me().then(function (me) {
+            log.log("user login: " + me.name);
+            storage.set("asanauser", {
+                user: me,
+                token: config.asana.credentials
+            });
+            asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, schedule.projectId, true).then(function () {
+                log.log("SBI schedule task completed. check update " + schedule.checkPeriod + "ms later");
+                setTimeout(start, schedule.checkPeriod);
+            }).catch(function (err) {
+                log.log("SBI schedule task error - " + err.message + ". retry " + schedule.retryDelay + "ms later");
+                setTimeout(start, schedule.retryDelay);
+            });
         }).catch(function (err) {
-            log.log("SBI schedule task error - " + err.message + ". retry " + schedule.retryDelay + "ms later");
-            setTimeout(start, schedule.retryDelay);
+            log.log("user login error: " + err.message);
         });
     }
 }

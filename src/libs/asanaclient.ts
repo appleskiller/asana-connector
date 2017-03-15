@@ -92,7 +92,6 @@ function fetchListById(dispatcher: any, method: string, id: number, params?: any
 }
 
 export class AsanaClient {
-    private _token: string;
     private _nativeClient: Asana.Client;
     constructor(credentials?: Asana.auth.Credentials | string) {
         var client = Asana.Client.create({
@@ -105,6 +104,12 @@ export class AsanaClient {
     }
     nativeClient(): Asana.Client {
         return this._nativeClient;
+    }
+    refreshToken(refreshToken: string): Promise<Asana.auth.Credentials> {
+        return this._nativeClient.app.accessTokenFromRefreshToken(refreshToken , null);
+    }
+    me(): Promise<Users> {
+        return this._nativeClient.users.me();
     }
     workspaces(): Promise<Workspaces[]> {
         return fetchList(this._nativeClient.workspaces);

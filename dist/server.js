@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var express = require("express");
 var fs = require("fs");
 var http = require("http");
@@ -8,6 +9,7 @@ var bodyParser = require("body-parser");
 var session = require("express-session");
 var oathRouter = require("./routers/oauth");
 var resourceRouter = require("./routers/resource");
+var SBIschedule = require("./libs/SBIschedule");
 var Logger = require("./libs/logger");
 var log = Logger.getLogger("system");
 var config = require("../config/server.json");
@@ -47,5 +49,6 @@ httpServer.listen(PORT, function () {
 });
 httpsServer.listen(SSLPORT, function () {
     log.log("HTTPS Server is running on: https://localhost:" + SSLPORT);
+    SBIschedule.start();
 });
 //# sourceMappingURL=server.js.map

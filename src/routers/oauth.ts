@@ -53,7 +53,6 @@ router.get('/oauth_callback', function (req, res) {
             log.log("asana connected.");
             // Here's where we direct the client to use Oauth with the credentials
             // we have acquired.
-            console.log(credentials);
             client.useOauth({ credentials: credentials.access_token });
             client.users.me().then(function (me) {
                 storage.set("asanauser" , {

@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Cache = (function () {
     function Cache(name) {
         this._name = name;
