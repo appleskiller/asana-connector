@@ -3,6 +3,8 @@ var express = require("express");
 var asanaclient = require("../libs/asanaclient");
 var Logger = require("../libs/logger");
 var cache = require("../libs/cache");
+var fs = require("fs");
+var config = require("../../config/server.json");
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_connector");
 var router = express.Router();
@@ -44,7 +46,8 @@ router.get('/oauth_callback', function (req, res) {
         log.log("asana callback with code");
         client.app.accessTokenFromCode(code).then(function (credentials) {
             log.log("asana connected.");
-            console.log(credentials);
+            config.asana.credentials = credentials;
+            fs.writeFileSync("./config/server.json", JSON.stringify(config), "utf-8");
             client.useOauth({ credentials: credentials.access_token });
             client.users.me().then(function (me) {
                 storage.set("asanauser", {

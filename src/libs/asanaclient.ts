@@ -235,8 +235,8 @@ export class AsanaClient {
                 project.tasks = [];
                 // fetch all subtasks
                 return Promise.map(tasks, function (task: Tasks, index: number, length: number) {
-                    log.log(`tasksInProject[${token.loaded}/${token.total}] - fetch task [${task.name}]`);
-                    return Promise.delay(1000).then(function () {
+                    log.log(`tasksInProject[${index}/${length}] - fetch task [${task.name}]`);
+                    return Promise.delay(200).then(function () {
                         return client.tasks.findById(task.id).catch(function (err) {
                             log.log(`tasksInProject - retry fetch task [${task.id}]`);
                             return client.tasks.findById(task.id).catch(function (err) {
@@ -245,7 +245,7 @@ export class AsanaClient {
                             });
                         }).then(function (task: Tasks){
                             project.tasks.push(task);
-                            log.log(`tasksInProject[${token.loaded}/${token.total}] - fetch subtask of [${task.name}]`);
+                            log.log(`tasksInProject[${index}/${length}] - fetch subtask of [${task.name}]`);
                             return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
                                 log.log(`tasksInProject - retry fetch subtasks with [${task.id}]`);
                                 return fetchListById(client.tasks, "subtasks", task.id , subtaskParams).catch(function (err) {
@@ -260,7 +260,7 @@ export class AsanaClient {
                         })
                     })
                 }, {
-                    concurrency: 1
+                    concurrency: 5
                 }).then(function () {
                     progress.end(token.id);
                     return Promise.resolve(project);

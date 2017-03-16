@@ -23,7 +23,7 @@ h4 {
 }
 .monitor-page {
     position: absolute;
-    height: 200px;
+    height: 280px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -40,12 +40,13 @@ h4 {
     position: absolute;
     top: 22px;
     bottom: 0;
-    left: 0;
+    left: 50%;
     right: 0;
     overflow-x: hidden;
     overflow-y: auto;
     padding-left: 8px;
     padding-right: 8px;
+    padding-bottom: 8px;
 }
 .monitor-page .task-list .task-item{
     padding: 2px 0px;
@@ -62,6 +63,18 @@ h4 {
     -moz-transition: width 1s;/* Firefox 4 */
     -webkit-transition: width 1s;/* Safari 和 Chrome */
     -o-transition: width 1s;/* Opera */
+}
+.monitor-page .log-list {
+    position: absolute;
+    top: 22px;
+    bottom: 0;
+    left: 0px;
+    right: 50%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 8px;
 }
 .signin-page{
     height: 100%;
@@ -99,7 +112,7 @@ h4 {
     padding: 8px;
     overflow: hidden;
     position: absolute;
-    bottom: 200px;
+    bottom: 280px;
     top: 100px;
     left: 0;
     right: 0;
@@ -107,6 +120,10 @@ h4 {
 .resource-page .projects h4 {
     border-bottom: solid 1px #DDD;
     padding-bottom: 10px;
+    /* display: inline-block; */
+}
+.resource-page .projects h4 a {
+    margin-left: 10px;
 }
 .resource-page .projects .content{
     overflow-y: auto;
@@ -126,9 +143,12 @@ h4 {
     color: #000;
 }
 .resource-page .projects ul li a:hover {
-    background-color: #198EDB;
-    color: #FFF;
-    border-color: #2974A5;
+    
+background-color: #198EDB;
+    
+color: #FFF;
+    
+border-color: #2974A5;
 }
 .resource-page .projects ul li{
     padding: 4px 0;

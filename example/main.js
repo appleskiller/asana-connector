@@ -11,12 +11,11 @@ $(document).ready(function () {
             var ret = window.confirm("抽取数据 [ "+item.name+" ] 到数据观");
             if (ret) {
                 $.ajax({
-                    url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
+                    url: 'https://localhost:18081/asana/resource/schedule',
                     type: "POST",
                     timeout: 0,
                     contentType: "application/json",
                     data: JSON.stringify({
-                        datatableId: "" ,
                         projectId: item.id
                     })
                 }).then(function(result) {
@@ -70,13 +69,6 @@ $(document).ready(function () {
         // }).then(function(result) {
         //     renderList("teams",result);
         // });
-        // $.ajax({
-        //     url: 'https://localhost:18081/asana/resource/projects',
-        //     type: "GET",
-        //     timeout: 0
-        // }).then(function(result) {
-        //     renderList("projects",result);
-        // });
 
         // $.ajax({
         //     url: 'https://localhost:18081/asana/resource/upload/shujuguan/projects',
@@ -109,7 +101,16 @@ $(document).ready(function () {
         //     })
         // })
     }
-    function renderMonitoring(progressTasks , noTaskMsg) {
+    function renderLogList(logs) {
+        var list = monitorPage.find(".log-list").empty();
+        if (logs && logs.length) {
+            for (var i = logs.length - 1; i >= 0; i--) {
+                list.append("<div>" + logs[i] + "</div>");
+            }
+        }
+        list.scrollTop(10000);
+    }
+    function renderProgressing(progressTasks , noTaskMsg) {
         var tasks = [];
         if (progressTasks) {
             for (var key in progressTasks) {
@@ -157,47 +158,45 @@ $(document).ready(function () {
             }
         }
     }
-    // fetch connected user
-    function detectUser() {
-        if (asanaUser) {
-            return;
-        }
-        $.ajax({
-            type: "GET",
-            url: "https://localhost:18081/asana/currentuser"
-        })
-        .then(function (result) {
-            var user = (result && result.connected) ? result.user : null;
-            setAsanaUser(user);
-        })
-        .always(function (xhr) {
-            var time = 2000;
-            if (xhr && xhr.status === 0) {
-                time = 4000;
-            }
-            setTimeout(detectUser , time);
-        });
-    }
     signinPage.find(".loginBtn").click(function () {
         window.open("https://localhost:18081/asana/connect" , "Asana Connector" , "location=no,menubar=no,toolbar=no,copyhistory=no");
         signinPage.find(".loginBtn").html("Authorized in Asana...").attr("disabled" , "disabled");
     });
+    resourcePage.find(".start-schedule").click(function () {
+        $.ajax({
+            type: "GET",
+            url: "https://localhost:18081/asana/resource/schedule/sbi"
+        })
+    })
+    resourcePage.find(".projects-refresh").click(function () {
+        $.ajax({
+            url: 'https://localhost:18081/asana/resource/projects',
+            type: "GET",
+            timeout: 0
+        }).then(function(result) {
+            renderList("projects",result);
+        });
+    })
     // monitoring
     function monitoring() {
         $.ajax({
             type: "GET",
             url: "https://localhost:18081/asana/resource/monitoring"
         }).then(function (result) {
-            renderMonitoring(result);
+            // 进度监控
+            renderProgressing(result.progress);
+            // log
+            renderLogList(result.logs);
+            // 用户监控
+            setAsanaUser(result.user);
         }).always(function (xhr) {
             var time = 2000;
             if (xhr && xhr.status === 0) {
                 time = 4000;
-                renderMonitoring({} , "offline");
+                renderProgressing({} , "offline");
             }
             setTimeout(monitoring , time);
         })
     }
-    detectUser();
-    // monitoring();
+    monitoring();
 })

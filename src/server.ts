@@ -65,5 +65,4 @@ httpsServer.listen(SSLPORT, function () {
     log.log(`HTTPS Server is running on: https://localhost:${SSLPORT}`);
     // 启动立即执行
     SBIschedule.start();
-    
 });

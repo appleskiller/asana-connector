@@ -6,6 +6,8 @@ import * as cache from "../libs/cache";
 import * as shujuguanclient from "../libs/shujuguanclient";
 import * as progress from "../libs/progress";
 import * as asana2shujuguan from "../libs/asana2shujuguan";
+import * as fs from "fs";
+import * as SBIschedule from "../libs/SBIschedule";
 
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_resources");
@@ -124,7 +126,57 @@ router.post("/upload/shujuguan/projects" , function (req , res) {
 
 router.get("/monitoring" , function (req , res) {
     res.charset = 'utf-8';
-    res.send(progress.all())
+    var asanauser = storage.get("asanauser");
+    res.send({
+        progress: progress.all() ,
+        user: asanauser ? asanauser.user : null,
+        logs: Logger.getHistory()
+    })
 })
 
+router.get("/schedule" , function (req , res) {
+    try {
+        var content = fs.readFileSync("./schedule/SBI.json", "utf-8");
+        var json = JSON.parse(content);
+        var projectId = json.projectId;
+        var asanauser = storage.get("asanauser");
+        if (asanauser) {
+            var asana = asanaclient.create(asanauser.token);
+            asana.nativeClient().projects.findById(projectId).then(function (project) {
+                json.projectName = project.name;
+                res.charset = 'utf-8';
+                res.send(json);
+            }).catch(function (err) {
+                res.status(500).send(err);
+            })
+        } else {
+            res.status(401);
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }
+})
+
+router.post("/schedule" , function (req , res) {
+    var projectId = req.body.projectId;
+    if (!projectId) {
+        res.status(500).send("projectId needed!");
+    } else {
+        try {
+            var content = fs.readFileSync("./schedule/SBI.json", "utf-8");
+            var json = JSON.parse(content);
+            json.projectId = projectId;
+            fs.writeFileSync("./schedule/SBI.json", JSON.stringify(json) , "utf-8");
+            log.log("schedule updated!");
+            res.sendStatus(200);
+        } catch (err) {
+            res.status(500).send(err);
+        }
+    }
+})
+
+router.get("/schedule/sbi" , function (req , res) {
+    SBIschedule.start();
+    res.sendStatus(200);
+})
 export = router;

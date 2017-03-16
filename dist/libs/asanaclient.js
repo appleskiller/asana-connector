@@ -67,6 +67,9 @@ var AsanaClient = (function () {
     AsanaClient.prototype.nativeClient = function () {
         return this._nativeClient;
     };
+    AsanaClient.prototype.refreshToken = function (refreshToken) {
+        return this._nativeClient.app.accessTokenFromRefreshToken(refreshToken, null);
+    };
     AsanaClient.prototype.me = function () {
         return this._nativeClient.users.me();
     };
@@ -194,7 +197,7 @@ var AsanaClient = (function () {
                 project.tasks = [];
                 return Promise.map(tasks, function (task, index, length) {
                     log.log("tasksInProject[" + token.loaded + "/" + token.total + "] - fetch task [" + task.name + "]");
-                    return Promise.delay(1000).then(function () {
+                    return Promise.delay(500).then(function () {
                         return client.tasks.findById(task.id).catch(function (err) {
                             log.log("tasksInProject - retry fetch task [" + task.id + "]");
                             return client.tasks.findById(task.id).catch(function (err) {
@@ -218,7 +221,7 @@ var AsanaClient = (function () {
                         });
                     });
                 }, {
-                    concurrency: 1
+                    concurrency: 4
                 }).then(function () {
                     progress.end(token.id);
                     return Promise.resolve(project);

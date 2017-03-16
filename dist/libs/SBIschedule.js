@@ -29,8 +29,12 @@ function start() {
         setTimeout(start, 60000);
     }
     else {
+        if (!config.asana.credentials) {
+            return;
+        }
         var asana = asanaclient.create(config.asana.credentials);
         var shujuguan = shujuguanclient.create();
+        log.log("login...");
         asana.me().then(function (me) {
             log.log("user login: " + me.name);
             storage.set("asanauser", {
@@ -46,6 +50,15 @@ function start() {
             });
         }).catch(function (err) {
             log.log("user login error: " + err.message);
+            log.log("refresh user token!");
+            asana.refreshToken(config.asana.credentials.refresh_token).then(function (credentials) {
+                log.log("user token refreshed!");
+                config.asana.credentials = credentials;
+                fs.writeFileSync("./config/server.json", JSON.stringify(config), "utf-8");
+                setTimeout(start, 1000);
+            }).catch(function (err) {
+                log.log("refresh user token error: " + err.message + "! retry after 1000ms");
+            });
         });
     }
 }

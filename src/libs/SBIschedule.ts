@@ -31,8 +31,12 @@ export function start() {
 		log.log(`SBI schedule load error ! retry 60s later.`);
 		setTimeout(start , 60000);
 	} else {
+		if (!config.asana.credentials) {
+			return;
+		}
 		var asana = asanaclient.create(config.asana.credentials);
 		var shujuguan = shujuguanclient.create();
+		log.log(`login...`);
 		asana.me().then(function (me) {
 			log.log(`user login: ${me.name}`);
 			storage.set("asanauser" , {
@@ -58,7 +62,6 @@ export function start() {
 				setTimeout(start , 1000);
 			}).catch(function (err) {
 				log.log(`refresh user token error: ${err.message}! retry after 1000ms`);
-				setTimeout(start , 1000);
 			})
 		})
 	}

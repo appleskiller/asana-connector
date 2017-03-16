@@ -3,7 +3,9 @@ import * as Asana from "asana";
 import * as asanaclient from "../libs/asanaclient";
 import * as Logger from "../libs/logger";
 import * as cache from "../libs/cache";
+import * as fs from "fs";
 
+var config = require("../../config/server.json");
 var storage = cache.createInstance("asana");
 var log = Logger.getLogger("asana_connector");
 var router = express.Router();
@@ -51,6 +53,9 @@ router.get('/oauth_callback', function (req, res) {
         // Get token. Store it in the cookie and redirect home.
         client.app.accessTokenFromCode(code).then(function (credentials) {
             log.log("asana connected.");
+            config.asana.credentials = credentials;
+			// write file;
+            fs.writeFileSync("./config/server.json", JSON.stringify(config) , "utf-8");
             // Here's where we direct the client to use Oauth with the credentials
             // we have acquired.
             client.useOauth({ credentials: credentials.access_token });
@@ -59,6 +64,7 @@ router.get('/oauth_callback', function (req, res) {
                     user: me ,
                     token: credentials
                 });
+                // 更新config
                 res.send(`<script>window.close()</script>`);
             }).catch(function (err) {
                 res.charset = 'utf-8';
