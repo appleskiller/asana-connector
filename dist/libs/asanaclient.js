@@ -196,8 +196,8 @@ var AsanaClient = (function () {
                 token.total = tasks.length;
                 project.tasks = [];
                 return Promise.map(tasks, function (task, index, length) {
-                    log.log("tasksInProject[" + token.loaded + "/" + token.total + "] - fetch task [" + task.name + "]");
-                    return Promise.delay(500).then(function () {
+                    log.log("tasksInProject[" + index + "/" + length + "] - fetch task [" + task.name + "]");
+                    return Promise.delay(200).then(function () {
                         return client.tasks.findById(task.id).catch(function (err) {
                             log.log("tasksInProject - retry fetch task [" + task.id + "]");
                             return client.tasks.findById(task.id).catch(function (err) {
@@ -206,7 +206,7 @@ var AsanaClient = (function () {
                             });
                         }).then(function (task) {
                             project.tasks.push(task);
-                            log.log("tasksInProject[" + token.loaded + "/" + token.total + "] - fetch subtask of [" + task.name + "]");
+                            log.log("tasksInProject[" + index + "/" + length + "] - fetch subtask of [" + task.name + "]");
                             return fetchListById(client.tasks, "subtasks", task.id, subtaskParams).catch(function (err) {
                                 log.log("tasksInProject - retry fetch subtasks with [" + task.id + "]");
                                 return fetchListById(client.tasks, "subtasks", task.id, subtaskParams).catch(function (err) {
@@ -221,7 +221,7 @@ var AsanaClient = (function () {
                         });
                     });
                 }, {
-                    concurrency: 4
+                    concurrency: 5
                 }).then(function () {
                     progress.end(token.id);
                     return Promise.resolve(project);
