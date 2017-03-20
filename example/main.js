@@ -8,7 +8,7 @@ $(document).ready(function () {
 
     function _onProjectClickedHandle(item) {
         return function () {
-            var ret = window.confirm("抽取数据 [ "+item.name+" ] 到数据观");
+            var ret = window.confirm("设置从Asana抽取 [ "+item.name+" ] 数据到数据观");
             if (ret) {
                 $.ajax({
                     url: 'https://localhost:18081/asana/resource/schedule',
@@ -27,7 +27,7 @@ $(document).ready(function () {
     function renderListItem(type , item) {
         var li = $('<li data-id="'+item.id+'">'+item.name+'</li>');
         if (type === "projects") {
-            li.html("<a href='javascript:void(0);'>upload</a>" + "<span>"+item.name+"</span>")
+            li.html("<a href='javascript:void(0);'>设置</a>" + "<span>"+item.name+"</span>")
             li.find("a").click(_onProjectClickedHandle(item));
         }
         return li;

@@ -221,7 +221,7 @@ var AsanaClient = (function () {
                         });
                     });
                 }, {
-                    concurrency: 5
+                    concurrency: 3
                 }).then(function () {
                     progress.end(token.id);
                     return Promise.resolve(project);
