@@ -64,8 +64,9 @@ export function start() {
 				token: config.asana.credentials
 			});
 			asana2shujuguan.uploadTasksTableWithProject(asana , shujuguan , schedule.projectId , true).then(function () {
-				log.log(`SBI schedule task completed. check update ${schedule.checkPeriod}ms later`);
-				laterStart(nextUpdateInterval(schedule));
+				var nextInterval = nextUpdateInterval(schedule);
+				log.log(`SBI schedule task completed. check update ${nextInterval}ms later`);
+				laterStart(nextInterval);
 			}).catch(function (err) {
 				log.log(`SBI schedule task error - ${err.message}. retry ${schedule.retryDelay}ms later`);
 				laterStart(schedule.retryDelay);
