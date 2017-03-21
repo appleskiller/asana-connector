@@ -72,14 +72,14 @@ function fillnull(): any {
     return null;
 }
 function subtasks2count(task: asanaclient.Tasks): number {
-    return (task.subtasks && task.subtasks.length) ? task.subtasks.length : 1;
+    return (task.subtasks && task.subtasks.length) ? task.subtasks.length + 1 : 1;
 }
 function subtasks2completed(task: asanaclient.Tasks): number {
     var subtasks = task.subtasks || [];
-    if (!subtasks.length) {
-        return task.completed ? 1 : 0;
+    if (task.completed) {
+        return subtasks2count(task);
     } else {
-        var ret = 0;
+        var ret = task.completed ? 1 : 0;
         for (var i = 0; i < subtasks.length; i++) {
             subtasks[i] && subtasks[i].completed && (ret++)
         }
