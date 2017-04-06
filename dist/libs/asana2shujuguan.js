@@ -48,27 +48,65 @@ function ISO2datestring(str) {
     }
     return null;
 }
+function ISONow(str) {
+    return new Date(+new Date() + 8 * 3600 * 1000).toISOString();
+}
 function fillnow() {
     var isoStr = new Date(+new Date() + 8 * 3600 * 1000).toISOString();
     return isoStr.split("T")[0];
+}
+function isCountableTask(beginDate, completedDate) {
+    if (!completedDate) {
+        return true;
+    }
+    else {
+        return new Date(parseInt(beginDate)).getTime() < new Date(completedDate).getTime();
+    }
 }
 function fillnull() {
     return null;
 }
 function subtasks2count(task) {
-    return (task.subtasks && task.subtasks.length) ? task.subtasks.length : 1;
+    return (task.subtasks && task.subtasks.length) ? task.subtasks.length + 1 : 1;
 }
 function subtasks2completed(task) {
     var subtasks = task.subtasks || [];
-    if (!subtasks.length) {
-        return task.completed ? 1 : 0;
+    if (task.completed) {
+        return subtasks2count(task);
     }
     else {
-        var ret = 0;
+        var ret = task.completed ? 1 : 0;
         for (var i = 0; i < subtasks.length; i++) {
             subtasks[i] && subtasks[i].completed && (ret++);
         }
         return ret;
+    }
+}
+function cursubtasks2count(task, attr) {
+    if (!attr || !attr.projectBeginAt) {
+        return subtasks2count(task);
+    }
+    var subtasks = task.subtasks || [];
+    var count = 1;
+    for (var i = 0; i < subtasks.length; i++) {
+        subtasks[i] && isCountableTask(attr.projectBeginAt, subtasks[i].completed_at) && (count += 1);
+    }
+    return count;
+}
+function cursubtasks2completed(task, attr) {
+    if (!attr || !attr.projectBeginAt) {
+        return subtasks2completed(task);
+    }
+    var subtasks = task.subtasks || [];
+    if (task.completed) {
+        return cursubtasks2count(task, attr);
+    }
+    else {
+        var count = 0;
+        for (var i = 0; i < subtasks.length; i++) {
+            subtasks[i] && subtasks[i].completed && isCountableTask(attr.projectBeginAt, subtasks[i].completed_at) && (count += 1);
+        }
+        return count;
     }
 }
 var taskTableHeader = [
@@ -105,6 +143,8 @@ var taskTableHeader = [
     { property: "tags", name: "tags_count", dataType: "INTEGER", columnType: "INTEGER", valueConverter: array2count },
     { property: null, name: "subtasks_count", dataType: "INTEGER", columnType: "INTEGER", valueConverter: subtasks2count },
     { property: null, name: "subtasks_completed", dataType: "INTEGER", columnType: "INTEGER", valueConverter: subtasks2completed },
+    { property: null, name: "current_subtasks_count", dataType: "INTEGER", columnType: "INTEGER", valueConverter: cursubtasks2count },
+    { property: null, name: "current_subtasks_completed", dataType: "INTEGER", columnType: "INTEGER", valueConverter: cursubtasks2completed },
 ];
 function convertFieldType2DataType(type) {
     if (type === "number") {
@@ -128,13 +168,13 @@ function convertFieldType2ColumnType(type) {
         return "TEXT";
     }
 }
-function getTaskDataValue(header, task) {
+function getTaskDataValue(header, task, attr) {
     var property = header.property;
     if (!property || !(property in task)) {
-        return header.valueConverter ? header.valueConverter(task) : null;
+        return header.valueConverter ? header.valueConverter(task, attr) : null;
     }
     else {
-        return header.valueConverter ? header.valueConverter(task ? task[property] : null) : null;
+        return header.valueConverter ? header.valueConverter((task ? task[property] : null), attr) : null;
     }
 }
 function getCustomFieldValue(field) {
@@ -177,13 +217,14 @@ function getTaskTableName(project, type) {
     if (type === void 0) { type = "uptodate"; }
     return project.name + "-" + project.workspace.name + "-" + type;
 }
-function getTaskTablePrivateAttrs(project, type) {
+function getTaskTablePrivateAttrs(project, type, attrs) {
     if (type === void 0) { type = "uptodate"; }
     return {
         "from": "asana",
         "tableType": type,
         "projectId": "" + project.id,
-        "lastupdate": "" + (new Date()).getTime()
+        "lastupdate": "" + (new Date()).getTime(),
+        "projectBeginAt": (attrs && attrs.projectBeginAt) ? attrs.projectBeginAt : "" + (new Date()).getTime()
     };
 }
 function createTaskTableColumns(project) {
@@ -198,6 +239,12 @@ function createTaskTableColumns(project) {
         name: "project_name",
         dataType: 'STRING',
         columnType: 'TEXT',
+        length: -1
+    });
+    columns.push({
+        name: "project_begin_at",
+        dataType: 'INTEGER',
+        columnType: 'INTEGER',
         length: -1
     });
     for (var i = 0; i < taskTableHeader.length; i++) {
@@ -222,15 +269,24 @@ function createTaskTableColumns(project) {
     }
     return columns;
 }
-function createTaskTableRowData(columns, task, project) {
+function createTaskTableRowData(columns, task, project, attrs) {
     var rowdata = [];
     rowdata.push("" + project.id);
     rowdata.push(project.name);
+    rowdata.push(parseInt(attrs.projectBeginAt));
     for (var i = 0; i < taskTableHeader.length; i++) {
-        rowdata.push(getTaskDataValue(taskTableHeader[i], task));
+        rowdata.push(getTaskDataValue(taskTableHeader[i], task, attrs));
     }
     appendCustomFieldValue(columns, rowdata, project, task);
     return rowdata;
+}
+function collectTaskTableRowDatas(tasks, columns, project, attrs) {
+    tasks = tasks || [];
+    var result = [];
+    for (var i = 0; i < tasks.length; i++) {
+        result.push(createTaskTableRowData(columns, tasks[i], project, attrs));
+    }
+    return result;
 }
 function createTaskTableByProject(project, type) {
     if (type === void 0) { type = 'uptodate'; }
@@ -268,11 +324,12 @@ function uploadTasksTableWithProject(asana, shujuguan, projectId, promiseful) {
         name: progressMessage
     });
     log.log(progressMessage);
-    var promise = asana.tasksInProject(projectId, { opt_fields: "completed" }).then(function (project) {
+    var promise = asana.tasksInProject(projectId, { opt_fields: "completed,completed_at" }).then(function (project) {
         var columns = createTaskTableColumns(project);
-        var rowdatas = [];
+        var tasks = [];
+        var rowdatas;
         return Promise.each(project.tasks, function (task, index, length) {
-            rowdatas.push(createTaskTableRowData(columns, task, project));
+            tasks.push(task);
         }).then(function () {
             progressMessage = "upload tasks to shujuguan (2/3) : fetch datatables from shujuguan";
             log.log(progressMessage);
@@ -303,7 +360,8 @@ function uploadTasksTableWithProject(asana, shujuguan, projectId, promiseful) {
                         }
                     }).then(function (datatable) {
                         log.log("update uptodate table to shujuguan");
-                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "uptodate");
+                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "uptodate", datatable.dataConfig.attrs);
+                        !rowdatas && (rowdatas = collectTaskTableRowDatas(tasks, columns, project, datatable.dataConfig.attrs));
                         return shujuguan.datatables.update(datatable, rowdatas, false);
                     }),
                     Promise.resolve(daytodayTable).then(function (dt) {
@@ -319,7 +377,8 @@ function uploadTasksTableWithProject(asana, shujuguan, projectId, promiseful) {
                     }).then(function (datatable) {
                         if (isReachDayToDayCycle(datatable)) {
                             log.log("update daytoday table to shujuguan");
-                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "daytoday");
+                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project, "daytoday", datatable.dataConfig.attrs);
+                            !rowdatas && (rowdatas = collectTaskTableRowDatas(tasks, columns, project, datatable.dataConfig.attrs));
                             return shujuguan.datatables.update(datatable, rowdatas, true);
                         }
                         else {

@@ -6,18 +6,19 @@ import * as progress from "./progress";
 
 var log = Logger.getLogger("asana2shujuguan");
 
-type HeaderProp = {
-	property: string;
-	name: string;
-	dataType: string;
-	columnType: string;
-	valueConverter: (value: any) => any;
-}
 type PrivateTaskAttrs = {
     "from": string;
     "tableType": string;
     "projectId": string;
     "lastupdate": string;
+    "projectBeginAt": string;
+}
+type HeaderProp = {
+	property: string;
+	name: string;
+	dataType: string;
+	columnType: string;
+	valueConverter: (value: any , attr: PrivateTaskAttrs) => any;
 }
 function any2any(v:any):any {
 	return v;
@@ -63,10 +64,21 @@ function ISO2datestring(str: string): string {
     }
     return null;
 }
+function ISONow(str: string): string {
+    // 换算中国标准时间
+    return new Date(+new Date()+8*3600*1000).toISOString();
+}
 function fillnow(): string {
     // 换算中国标准时间
     var isoStr = new Date(+new Date()+8*3600*1000).toISOString();
     return isoStr.split("T")[0];
+}
+function isCountableTask(beginDate: string , completedDate: string) {
+    if (!completedDate) {
+        return true;
+    } else {
+        return new Date(parseInt(beginDate)).getTime() < new Date(completedDate).getTime();
+    }
 }
 function fillnull(): any {
     return null;
@@ -84,6 +96,32 @@ function subtasks2completed(task: asanaclient.Tasks): number {
             subtasks[i] && subtasks[i].completed && (ret++)
         }
         return ret;
+    }
+}
+function cursubtasks2count(task: asanaclient.Tasks , attr: PrivateTaskAttrs): number {
+    if (!attr || !attr.projectBeginAt) {
+        return subtasks2count(task);
+    }
+    var subtasks = task.subtasks || [];
+    var count = 1;
+    for (var i = 0; i < subtasks.length; i++) {
+        subtasks[i] && isCountableTask(attr.projectBeginAt , subtasks[i].completed_at) && (count += 1);
+    }
+    return count;
+}
+function cursubtasks2completed(task: asanaclient.Tasks , attr: PrivateTaskAttrs): number {
+    if (!attr || !attr.projectBeginAt) {
+        return subtasks2completed(task);
+    }
+    var subtasks = task.subtasks || [];
+    if (task.completed) {
+        return cursubtasks2count(task , attr);
+    } else {
+        var count = 0;
+        for (var i = 0; i < subtasks.length; i++) {
+            subtasks[i] && subtasks[i].completed && isCountableTask(attr.projectBeginAt , subtasks[i].completed_at) && (count += 1)
+        }
+        return count;
     }
 }
 // -----------------------------------------------------------------------
@@ -129,6 +167,8 @@ var taskTableHeader: HeaderProp[] = [
 	{property: "tags" , name: "tags_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: array2count},
 	{property: null , name: "subtasks_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: subtasks2count},
 	{property: null , name: "subtasks_completed" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: subtasks2completed},
+    {property: null , name: "current_subtasks_count" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: cursubtasks2count},
+	{property: null , name: "current_subtasks_completed" , dataType: "INTEGER" , columnType: "INTEGER" , valueConverter: cursubtasks2completed},
 ]
 
 function convertFieldType2DataType(type) {
@@ -150,12 +190,12 @@ function convertFieldType2ColumnType(type) {
     }
 }
 
-function getTaskDataValue(header: HeaderProp , task: asanaclient.Tasks): any {
+function getTaskDataValue(header: HeaderProp , task: asanaclient.Tasks , attr: PrivateTaskAttrs): any {
     var property = header.property
     if (!property || !(property in task)) {
-        return header.valueConverter ? header.valueConverter(task) : null;
+        return header.valueConverter ? header.valueConverter(task , attr) : null;
     } else {
-        return header.valueConverter ? header.valueConverter(task ? task[property] : null) : null;
+        return header.valueConverter ? header.valueConverter((task ? task[property] : null) , attr) : null;
     }
 }
 function getCustomFieldValue(field: any) {
@@ -196,12 +236,13 @@ function getTaskTableName(project: asanaclient.Projects , type: string = "uptoda
     return `${project.name}-${project.workspace.name}-${type}`;
 }
 // type = uptodate || daytoday
-function getTaskTablePrivateAttrs(project: asanaclient.Projects , type: string = "uptodate"): PrivateTaskAttrs {
+function getTaskTablePrivateAttrs(project: asanaclient.Projects , type: string = "uptodate" , attrs?: PrivateTaskAttrs): PrivateTaskAttrs {
     return {
         "from": "asana",
         "tableType": type,
         "projectId": ""+project.id,
-        "lastupdate": ""+(new Date()).getTime()
+        "lastupdate": ""+(new Date()).getTime(),
+        "projectBeginAt": (attrs && attrs.projectBeginAt) ? attrs.projectBeginAt : ""+(new Date()).getTime()
     }
 }
 function createTaskTableColumns(project: asanaclient.Projects): shujuguanclient.Column[] {
@@ -217,6 +258,12 @@ function createTaskTableColumns(project: asanaclient.Projects): shujuguanclient.
         name: "project_name",
         dataType: 'STRING',
         columnType: 'TEXT',
+        length: -1
+    })
+    columns.push({
+        name: "project_begin_at",
+        dataType: 'INTEGER',
+        columnType: 'INTEGER',
         length: -1
     })
     // 2. 处理taskTableHeader
@@ -243,18 +290,27 @@ function createTaskTableColumns(project: asanaclient.Projects): shujuguanclient.
     }
     return columns;
 }
-function createTaskTableRowData(columns: shujuguanclient.Column[] , task:asanaclient.Tasks , project: asanaclient.Projects): any[] {
+function createTaskTableRowData(columns: shujuguanclient.Column[] , task:asanaclient.Tasks , project: asanaclient.Projects , attrs: PrivateTaskAttrs): any[] {
     var rowdata: any[] = [];
     // 1. 加入项目名称
     rowdata.push("" + project.id);
     rowdata.push(project.name);
+    rowdata.push(parseInt(attrs.projectBeginAt));
     // 2. 处理taskTableHeader
     for (var i = 0; i < taskTableHeader.length; i++) {
-        rowdata.push(getTaskDataValue(taskTableHeader[i] , task))
+        rowdata.push(getTaskDataValue(taskTableHeader[i] , task , attrs))
     }
     // 3. 处理custom field
     appendCustomFieldValue(columns , rowdata , project , task);
     return rowdata;
+}
+function collectTaskTableRowDatas(tasks: asanaclient.Tasks[] , columns: shujuguanclient.Column[] , project: asanaclient.Projects , attrs: PrivateTaskAttrs) {
+    tasks = tasks || [];
+    var result = [];
+    for (var i = 0; i < tasks.length; i++) {
+        result.push(createTaskTableRowData(columns , tasks[i] , project , attrs));
+    }
+    return result;
 }
 function createTaskTableByProject(project: asanaclient.Projects , type: string = 'uptodate'): shujuguanclient.DataTable {
     var name = getTaskTableName(project , type);
@@ -289,12 +345,12 @@ export function uploadTasksTableWithProject(asana: asanaclient.AsanaClient , shu
         name: progressMessage
     });
     log.log(progressMessage);
-    var promise = asana.tasksInProject(projectId , {opt_fields: "completed"}).then(function (project: asanaclient.Projects) {
+    var promise = asana.tasksInProject(projectId , {opt_fields: "completed,completed_at"}).then(function (project: asanaclient.Projects) {
         var columns = createTaskTableColumns(project);
-        var rowdatas = [];
+        var tasks = [];
+        var rowdatas;
         return Promise.each(project.tasks , function (task: asanaclient.Tasks , index: number , length: number) {
-            // append rowdatas;
-            rowdatas.push(createTaskTableRowData(columns , task , project));
+            tasks.push(task);
         }).then(function () {
             progressMessage = `upload tasks to shujuguan (2/3) : fetch datatables from shujuguan`
 			log.log(progressMessage);
@@ -325,7 +381,8 @@ export function uploadTasksTableWithProject(asana: asanaclient.AsanaClient , shu
                         }
                     }).then(function (datatable: shujuguanclient.DataTable) {
                         log.log(`update uptodate table to shujuguan`)
-                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "uptodate");
+                        datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "uptodate" , datatable.dataConfig.attrs);
+                        !rowdatas && (rowdatas = collectTaskTableRowDatas(tasks , columns , project , datatable.dataConfig.attrs));
                         return shujuguan.datatables.update(datatable , rowdatas , false);
                     }),
                     // 追加daytoday数据
@@ -342,7 +399,8 @@ export function uploadTasksTableWithProject(asana: asanaclient.AsanaClient , shu
                         // 判断是否能够追加
                         if (isReachDayToDayCycle(datatable)) {
                             log.log(`update daytoday table to shujuguan`)
-                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "daytoday");
+                            datatable.dataConfig.attrs = getTaskTablePrivateAttrs(project , "daytoday" , datatable.dataConfig.attrs);
+                            !rowdatas && (rowdatas = collectTaskTableRowDatas(tasks , columns , project , datatable.dataConfig.attrs));
                             return shujuguan.datatables.update(datatable , rowdatas , true);
                         } else {
                             log.log("Not to update cycle");

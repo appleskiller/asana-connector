@@ -22,11 +22,30 @@ function readScheduleJson() {
         return null;
     }
 }
+function nextUpdateInterval(schedule) {
+    var daytodayTime = (schedule && schedule.daytodayTime) ? schedule.daytodayTime : "17:00";
+    var times = daytodayTime.split(":");
+    var hours = parseInt(times[0]);
+    var minutes = parseInt(times[1]);
+    hours = !isNaN(hours) ? hours : 17;
+    minutes = !isNaN(minutes) ? minutes : 0;
+    var d1 = new Date();
+    var d2 = new Date();
+    d2.setHours(hours);
+    d2.setMinutes(minutes);
+    d2.setDate(d1.getDate() + 1);
+    return d2.getTime() - d1.getTime();
+}
+var timeID;
+function laterStart(delay) {
+    clearTimeout(timeID);
+    timeID = setTimeout(start, delay);
+}
 function start() {
     var schedule = readScheduleJson();
     if (!schedule) {
         log.log("SBI schedule load error ! retry 60s later.");
-        setTimeout(start, 60000);
+        laterStart(60000);
     }
     else {
         if (!config.asana.credentials) {
@@ -42,11 +61,12 @@ function start() {
                 token: config.asana.credentials
             });
             asana2shujuguan.uploadTasksTableWithProject(asana, shujuguan, schedule.projectId, true).then(function () {
-                log.log("SBI schedule task completed. check update " + schedule.checkPeriod + "ms later");
-                setTimeout(start, schedule.checkPeriod);
+                var nextInterval = nextUpdateInterval(schedule);
+                log.log("SBI schedule task completed. check update " + nextInterval + "ms later");
+                laterStart(nextInterval);
             }).catch(function (err) {
                 log.log("SBI schedule task error - " + err.message + ". retry " + schedule.retryDelay + "ms later");
-                setTimeout(start, schedule.retryDelay);
+                laterStart(schedule.retryDelay);
             });
         }).catch(function (err) {
             log.log("user login error: " + err.message);
@@ -55,7 +75,7 @@ function start() {
                 log.log("user token refreshed!");
                 config.asana.credentials = credentials;
                 fs.writeFileSync("./config/server.json", JSON.stringify(config), "utf-8");
-                setTimeout(start, 1000);
+                laterStart(1000);
             }).catch(function (err) {
                 log.log("refresh user token error: " + err.message + "! retry after 1000ms");
             });
